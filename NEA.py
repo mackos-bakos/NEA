@@ -315,13 +315,13 @@ def create_mutation(strand):
         mutated.append(random.choice(bases))
         return (mutated,"INSERTION")
     
-def Sqr(num):
-    """square the current number"""
-    #square the number
-    return num*num
+
 def distance_to(vec_point_a,vec_point_b):
     """calculate linear distance between two coordinates"""
-    
+
+    #only used in this function, no need for global definition
+    Sqr = lambda x: x*x
+
     #find opp and adj from vec differences
     change_in_x = abs(vec_point_a[0] - vec_point_b[0])
     change_in_y = abs(vec_point_a[1] - vec_point_b[1])
@@ -739,28 +739,26 @@ class herbivore:
         
     def run(this,obj):
         #run method (fight or flight)
-        
-        if (this.dummy != None):
-            #if currently moving away
-            
-            #update hormones
-            this.epinephrine+=0.7 * this.cns_depressant # add adrenaline, dulled by exhaustion
-            this.epinephrine = clamp(this.epinephrine,20 * this.cns_depressant,0)
-            
-            #if off the map
-            if (clamp(this.dummy.pos[0],650,150) != this.dummy.pos[0] or clamp(this.dummy.pos[1],550,50) != this.dummy.pos[1]):
-                this.dummy = dummy()
-            
-            #move target
-            this.wander()
-            return
-        
+
         #create new target for entity to follow
         this.wait_for = 0
         this.target = None
         this.dummy = dummy()
         this.dummy.pos = point_of_orbit(this.pos, obj.rotation + random.randint(-5,5), 50) # face them precisely away from their pursuer 
         this.wander()
+            
+        #update hormones
+        this.epinephrine+=0.7 * this.cns_depressant # add adrenaline, dulled by exhaustion
+        this.epinephrine = clamp(this.epinephrine,20 * this.cns_depressant,0)
+            
+        #if off the map
+        if (clamp(this.dummy.pos[0],650,150) != this.dummy.pos[0] or clamp(this.dummy.pos[1],550,50) != this.dummy.pos[1]):
+            this.dummy = dummy()
+            
+        #move target
+        this.wander()
+        return
+        
         
 class carnivore:
     
@@ -1030,9 +1028,10 @@ class slider:
             pygame.draw.rect(panel, colour, pygame.Rect(this.pos[0],this.pos[1],this.val,12))
        
         #if hovered and clicked
-        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 100 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 12 and c_bool):
-            #update val
-            this.val = c_vec[0] - this.pos[0]
+        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 100 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 12):
+            if (c_bool):
+                #update val
+                this.val = c_vec[0] - this.pos[0]
         
         #render font glyphs
         panel.blit(ui_font_scale_3.render(str(math.floor(((this.val / 100) * (this.max - this.min)) + this.min)), True, vgui_aux_text_external),(this.pos[0]+102,this.pos[1]))
@@ -1644,7 +1643,7 @@ vgui_slider_photosynth = slider(
     "GPP",
     1,
     1000,
-    500)
+    100)
 
 vgui_slider_birth_muta_chance = slider(
     (660,250),
@@ -1753,39 +1752,49 @@ vgui_fore_color = color_selector(
     "vgui_fore")
 
 vgui_herbivore_color = color_selector(
-    (150,50),
+    (200,50),
     vgui_entity_herbivore,
     "vgui_entity_herbivore")
 
 vgui_carnivore_color = color_selector(
-    (150,105),
+    (200,105),
     vgui_entity_carnivore,
     "vgui_entity_carnivore")
 
+vgui_nose_color = color_selector(
+    (200,160),
+    vgui_entity_nose,
+    "vgui_entity_nose")
+
 vgui_text_internal_color = color_selector(
-    (150,215),
+    (200,215),
     vgui_aux_text_internal,
     "vgui_aux_text_internal")
 
 vgui_text_external_color = color_selector(
-    (150,270),
+    (200,270),
     vgui_aux_text_external,
     "vgui_aux_text_external")
 
 vgui_egg_color = color_selector(
-    (150,325),
+    (200,325),
     vgui_herbivore_egg,
     "vgui_herbivore_egg")
 
-vgui_nose_color = color_selector(
-    (150,160),
-    vgui_entity_nose,
-    "vgui_entity_nose")
-
 vgui_color_dead = color_selector(
-    (150,380),
+    (200,380),
     vgui_entity_dead,
     "vgui_entity_dead")
+
+vgui_color_ON_state = color_selector(
+    (200,435),
+    vgui_color_ON,
+    "vgui_color_ON")
+
+vgui_color_OFF_state = color_selector(
+    (200,490),
+    vgui_color_OFF,
+    "vgui_color_OFF")
 
 #define single selection interfaces
 vgui_slc_ray_ignore = selection_interface_m(
@@ -1794,18 +1803,8 @@ vgui_slc_ray_ignore = selection_interface_m(
     [False,False],
     "ignore")
 
-vgui_color_ON_state = color_selector(
-    (150,500),
-    vgui_color_ON,
-    "vgui_color_ON")
-
-vgui_color_OFF_state = color_selector(
-    (150,560),
-    vgui_color_OFF,
-    "vgui_color_OFF")
-
 vgui_color_blindness = selection_interface_s(
-    (250,50),
+    (350,50),
     ["normal","deutera","protano","tritano"],
     0)
 
@@ -1834,6 +1833,12 @@ log_box = group_box(
     "",
     400,
     550)
+
+program_bounding = group_box(
+    [0,0],
+    "",
+    1699,
+    799)
 
 #define preview organisms
 ui_herbivore = herbivore()
@@ -2439,7 +2444,10 @@ def main():
         #render font glyph to show processing time
         txt = ui_font_scale_3.render(f"processing time {t2p} ", True, vgui_aux_text_internal)
         panel.blit(txt,(400 - ((txt.get_width() + txt.get_width()) / 2),600))
-        
+    
+    #draw main program border
+    program_bounding.draw()
+
     #refresh canvas
     pygame.display.flip()
 
