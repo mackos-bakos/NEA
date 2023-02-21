@@ -236,6 +236,14 @@ def generate_dna_sequence(length):
 
 def read_dna_protein(strand):
     """REDUNDANT, reads opcode and operand from a dna strand"""
+
+    #check for non genetic material
+    if  type(strand) != list:
+        return
+
+    #check if len is too short to read a protein
+    if len(strand) < 8:
+        return
     
     #initialise protein variables
     active_site = read_dna_binary(strand[0:3])
@@ -257,6 +265,10 @@ def read_dna_protein(strand):
     return [active_site,op_code]
 def read_dna_binary(strand):
     """read a numerical value from genetic material"""
+
+    #check for non genetic material
+    if  type(strand) != list:
+        return
     
     #initialise binary variable
     binary = ""
@@ -280,7 +292,11 @@ def create_mutation(strand):
     if (strand == None):
         #prevent index error
         return 
-    
+
+    #check for non genetic material
+    if type(strand) != list:
+        return
+        
     #make copy, for some reason was passing by ref
     mutated = strand[:]
     
@@ -1552,6 +1568,9 @@ def handle_metrics():
             continue
             
 #define ui buttons
+print(create_mutation(
+    42
+    ))
 vgui_test_button = color_selector(
    (500,500),
    (480,50,20),
