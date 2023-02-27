@@ -16,7 +16,8 @@ try:
     import sys
     import os
     import threading
-    
+    from datetime import datetime
+    import pickle
 except:
     #triggers if not all libraries are installed, only non native is pygame
     print("you do not have the required libraries to run this program")
@@ -37,6 +38,13 @@ else:
     file.close()
     Config = json.load(open(os.getcwd() + "/config.json","r"))
     vgui_warning_config = True
+
+if not os.path.exists(os.getcwd() + "/simulations.txt"):
+    with open(os.getcwd() + "/simulations.txt", "a") as f:
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        f.write(f"file created at {dt_string}\n")
+        f.close()
     
     
 #initialise fonts and displays
@@ -441,8 +449,8 @@ def think_next_move(to_vec,from_vec,step):
     
     #add or subtract position to find position one step forward to target
     step *= 0.5 / lag_comp # account for lag
-    from_vec[0] += step * (to_vec[0] - from_vec[0] >= 0) - step * (to_vec[0] - from_vec[0] < 0)
-    from_vec[1] += step * (to_vec[1] - from_vec[1] >= 0) - step * (to_vec[1] - from_vec[1] < 0)
+    from_vec[0] += math.ceil(step * (to_vec[0] - from_vec[0] >= 0) - step * (to_vec[0] - from_vec[0] < 0))
+    from_vec[1] += math.ceil(step * (to_vec[1] - from_vec[1] >= 0) - step * (to_vec[1] - from_vec[1] < 0))
     
     #return new position
     return from_vec
@@ -654,6 +662,7 @@ class herbivore:
         this.nose = point_of_orbit(this.pos,this.rotation,10)
         
         #draw nose and body
+
         pygame.draw.line(panel,vgui_entity_nose,this.pos,this.nose,3)#nose layer
         pygame.draw.circle(panel,vgui_entity_herbivore,this.pos,5)#body layer
         
@@ -1568,9 +1577,6 @@ def handle_metrics():
             continue
             
 #define ui buttons
-print(create_mutation(
-    42
-    ))
 vgui_test_button = color_selector(
    (500,500),
    (480,50,20),
