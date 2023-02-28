@@ -39,12 +39,9 @@ else:
     Config = json.load(open(os.getcwd() + "/config.json","r"))
     vgui_warning_config = True
 
-if not os.path.exists(os.getcwd() + "/simulations.txt"):
-    with open(os.getcwd() + "/simulations.txt", "a") as f:
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        f.write(f"file created at {dt_string}\n")
-        f.close()
+if not os.path.exists(os.getcwd() + "/simulations"):
+    os.mkdir(os.getcwd() + "/simulations")
+    print(f"created a new simulations folder in {os.getcwd()}.")
     
     
 #initialise fonts and displays
@@ -125,6 +122,8 @@ PE = 0
 tick = 0
 balance = 0
 
+#saved simulations
+saved_simulations =  os.listdir(os.getcwd() + "/simulations")
 #genetic code variables
 bases = ["G","A","T","C"]
 
@@ -770,8 +769,7 @@ class herbivore:
         this.target = None
         this.dummy = dummy()
         this.dummy.pos = point_of_orbit(this.pos, obj.rotation + random.randint(-5,5), 50) # face them precisely away from their pursuer 
-        this.wander()
-            
+        
         #update hormones
         this.epinephrine+=0.7 * this.cns_depressant # add adrenaline, dulled by exhaustion
         this.epinephrine = clamp(this.epinephrine,20 * this.cns_depressant,0)
@@ -935,6 +933,7 @@ for i in range(Config["layer-1"]["herbivores"]):
 for i in range(Config["layer-1"]["carnivores"]):
     #add starting carnivores 
     hunter_object_array.append(carnivore())
+
     
 class button:
     def __init__(this,position_vec,label_str):
@@ -1575,6 +1574,90 @@ def handle_metrics():
         except:
             #catch if theres no next data point to join
             continue
+
+#save current simulation session
+def save_current_session(name):
+    #create its own folder
+    base_folder  = os.getcwd()+"/simulations/"+name
+    os.mkdir(base_folder)
+    
+    #save herbivore objects
+    with open(base_folder + "/herbivores.pickle","wb") as f:
+            #dump objects
+            pickle.dump(entity_object_array,f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
+    #save carnivore objects
+    with open(base_folder + "/carnivores.pickle","wb") as f:
+            #dump objects
+            pickle.dump(hunter_object_array,f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
+    #save food objects
+    with open(base_folder + "/food.pickle","wb") as f:
+            #dump objects
+            pickle.dump(food_object_array,f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+
+    #save log objects
+    with open(base_folder + "/log.pickle","wb") as f:
+            #dump objects
+            pickle.dump(log_index,f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+
+def load_previous_session(name):
+    base_folder  = os.getcwd()+"/simulations/"+name
+
+    global entity_object_array
+    global food_object_array
+    global hunter_object_array
+    global log_index
+    
+    #reset entity lists
+    entity_object_array = []
+    food_object_array = []
+    hunter_object_array = []
+    log_index = []
+    
+    #load herbivore objects
+    with open(base_folder + "/herbivores.pickle","rb") as f:
+            #load objects
+            entity_object_array = pickle.load(f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
+    #load carnivore objects
+    with open(base_folder + "/carnivores.pickle","rb") as f:
+            #load objects
+            hunter_object_array = pickle.load(f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
+    #load food objects
+    with open(base_folder + "/food.pickle","rb") as f:
+            #load objects
+            food_object_array = pickle.load(f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
+    #load food objects
+    with open(base_folder + "/log.pickle","rb") as f:
+            #load objects
+            log_index = pickle.load(f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
             
 #define ui buttons
 vgui_test_button = color_selector(
@@ -1600,7 +1683,9 @@ vgui_button_theme = button(
 vgui_button_entity_list_manager = button(
     (375,345),
     "edit ents")
-
+vgui_load_sim = button(
+    (100,200),
+    "load")
 
 #define ui sliders
 vgui_slider_food = slider(
@@ -1833,6 +1918,11 @@ vgui_color_blindness = selection_interface_s(
     ["normal","deutera","protano","tritano"],
     0)
 
+vgui_saved_simulations = selection_interface_s(
+    (200,200),
+    saved_simulations,
+    0)
+
 #define warnings ui elements
 vgui_warning_conf = warning(
     [300,250],
@@ -1867,6 +1957,9 @@ program_bounding = group_box(
 
 #define preview organisms
 ui_herbivore = herbivore()
+with open(os.getcwd() + "simulations.txt","ab") as f:
+    pickle.dump(ui_herbivore,f)
+    f.close()
 ui_carnivore = carnivore()
 ui_egg = egg((6,200),None,None)
 ui_food = food()
@@ -2342,7 +2435,9 @@ def main_menu():
         
     if vgui_button_options.draw():
         tab = 1
-        
+    vgui_saved_simulations.draw()
+    if (vgui_load_sim.draw()):
+        load_previous_session(saved_simulations[vgui_saved_simulations.selected])
     #handle x axis collision with border
     if (x + img_size[0] >= 1700) or (x <= 0):
         x_speed = -x_speed
@@ -2453,6 +2548,9 @@ def main():
         
     #internal exit command
     if (vgui_button_exit.draw()):
+        now = datetime.now()
+        dt_string = now.strftime("%d,%m,%Y(%H-%M-%S)")
+        save_current_session(dt_string)
         json.dump(Config,open(os.getcwd() + "/config.json","w"))
         pygame.quit()
         sys. exit()
