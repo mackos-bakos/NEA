@@ -124,6 +124,8 @@ balance = 0
 
 #saved simulations
 saved_simulations =  os.listdir(os.getcwd() + "/simulations")
+if not saved_simulations:
+    saved_simulations = ["no stored simulations!"]
 #genetic code variables
 bases = ["G","A","T","C"]
 
@@ -450,7 +452,7 @@ def think_next_move(to_vec,from_vec,step):
     step *= 0.5 / lag_comp # account for lag
     from_vec[0] += math.ceil(step * (to_vec[0] - from_vec[0] >= 0) - step * (to_vec[0] - from_vec[0] < 0))
     from_vec[1] += math.ceil(step * (to_vec[1] - from_vec[1] >= 0) - step * (to_vec[1] - from_vec[1] < 0))
-    
+
     #return new position
     return from_vec
 
@@ -564,10 +566,10 @@ class egg:
             #define new infant herbivore
             infant = herbivore()
             infant.egg_progress = -600
+            infant.genes = this.genes
             log_index.append(log_entry("herbivore born: ","genome",str(infant.genes)))
             infant.introgenic_dna = this.intron
             infant.pos = this.pos
-            infant.genes = this.genes
             
             #on birth mutation (genetic variation)
             if (random.randint(1,100) < vgui_slider_birth_muta_chance.val):
@@ -657,6 +659,11 @@ class herbivore:
     def draw(this,custom = False,custom_pos = None):
         #draw method
         
+        #clamps
+        this.speed = clamp(this.speed,100,0)
+        this.pos = [this.pos[0],this.pos[1]]
+        this.pos[0] = clamp(this.pos[0],650,150)
+        this.pos[1] = clamp(this.pos[1],550,50)
         #calculate nose position
         this.nose = point_of_orbit(this.pos,this.rotation,10)
         
@@ -1266,6 +1273,7 @@ class selection_interface_s:
         this.state = False
         this.c_state = False
         this.hovered = False
+
         
     def draw(this):
         #draw method
@@ -1274,19 +1282,17 @@ class selection_interface_s:
         c_vec = pygame.mouse.get_pos()
         c_bool = pygame.mouse.get_pressed()[0]
         
-        #draw main selection option 
-        pygame.draw.rect(panel, vgui_bounding, pygame.Rect(this.pos[0] - 1,this.pos[1] - 1,52,12))
-        pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],50,10))
-        
-        #render font glyphs for main selection
-        txt = ui_font_scale_3.render(this.selections[this.selected], True, vgui_aux_text_internal)
-        panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 25,this.pos[1]))
-        
         #redefinition to prevent always being True after hovering for first time
         this.hovered = False
         
+        txt = ui_font_scale_3.render(this.selections[this.selected], True, vgui_aux_text_internal)
+        
+        #prevent overflow
+        recession = 0
+        if txt.get_width() > 50:
+            recession = txt.get_width() - 45
         #if hovering main selection
-        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 50 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 10):
+        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 50 + recession and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 10):
             this.hovered = True
             
             #if mouse is pressed
@@ -1295,33 +1301,44 @@ class selection_interface_s:
                 #update state and last state
                 this.state = not this.state
                 this.c_state = this.state
-        
+                
+        #draw main selection option 
+        pygame.draw.rect(panel, vgui_bounding, pygame.Rect(this.pos[0] - 1,this.pos[1] - 1,52+ recession,12))
+        pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],50+ recession,10))
+
+        #render font glyphs for main selection
+        panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + (25 + (recession // 2)),this.pos[1]))
         #if selection interface is opened
         if (this.state):
             
             #for each selectable option
             for selection in range(len(this.selections)):
+
+                txt = ui_font_scale_3.render(this.selections[selection], True, vgui_aux_text_internal)
                 
+                #prevent overfow
+                if txt.get_width() > 50:
+                    recession = txt.get_width() - 45
+                    
                 #draw bounding and selection rect
-                pygame.draw.rect(panel, vgui_bounding, pygame.Rect(this.pos[0] - 1,this.pos[1] - 1 + 10 + (selection * 10),52,12))
-                pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1] + 10 + (selection * 10),50,10))
+                pygame.draw.rect(panel, vgui_bounding, pygame.Rect(this.pos[0] - 1,this.pos[1] - 1 + 10 + (selection * 10),52+recession,12))
+                pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1] + 10 + (selection * 10),50+recession,10))
                 
                 #render font glyph for referenced selection
-                txt = ui_font_scale_3.render(this.selections[selection], True, vgui_aux_text_internal)
-                panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 25,this.pos[1] + 10 + (selection * 10)))
+                panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 25 + (recession // 2),this.pos[1] + 10 + (selection * 10)))
                 
                 #if the selection is the selected option
                 if (selection == this.selected):
                     
                     #draw overlay to show selection on gui
-                    pygame.draw.rect(panel, vgui_state_1, pygame.Rect(this.pos[0],this.pos[1] + 10 + (selection * 10),50,10))
+                    pygame.draw.rect(panel, vgui_state_1, pygame.Rect(this.pos[0],this.pos[1] + 10 + (selection * 10),50+recession,10))
                     
                     #render new font glyph to prevent overdrawing 
                     txt = ui_font_scale_3.render(this.selections[selection], True, vgui_fore,)
-                    panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 25,this.pos[1] + 10 + (selection * 10)))
+                    panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 25 + (recession // 2),this.pos[1] + 10 + (selection * 10)))
                 
                 #if current selection is hovered
-                if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 50 and c_vec[1] > this.pos[1] + 10 + (selection * 10) and c_vec[1] < this.pos[1] + 20 + (selection * 10)):
+                if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 50+recession and c_vec[1] > this.pos[1] + 10 + (selection * 10) and c_vec[1] < this.pos[1] + 20 + (selection * 10)):
                     this.hovered = True
                     
                     #if mouse pressed
@@ -1460,7 +1477,8 @@ class verticle_slider:
         this.val = length - abs((val / (this.max-this.min)) * length)
         this.len = length
         
-    def draw(this):
+    def draw(this,maxi):
+        this.max = maxi
         #draw method
         
         #draw main slider body and bounding
@@ -1483,7 +1501,7 @@ class verticle_slider:
                 this.val = c_vec[1] + this.pos[1]
                 
         #return converted value to useable int
-        return this.max - math.floor(((this.val / this.len) * (this.max - this.min)) + this.min)
+        return abs(this.max - math.floor(((this.val / this.len) * (this.max - this.min)) + this.min))
     
 class group_box:
     
@@ -1615,7 +1633,8 @@ def save_current_session(name):
 
 def load_previous_session(name):
     base_folder  = os.getcwd()+"/simulations/"+name
-
+    if (not os.path.exists(base_folder)):
+        return
     global entity_object_array
     global food_object_array
     global hunter_object_array
@@ -1658,6 +1677,7 @@ def load_previous_session(name):
             
             #close handle to file (memory leak protection)
             f.close()
+    print(f"succesfully loaded {len(entity_object_array)} herbivores {len(hunter_object_array)} carnivores {len(food_object_array)} food and {len(log_index)} logs")
             
 #define ui buttons
 vgui_test_button = color_selector(
@@ -1930,6 +1950,13 @@ vgui_warning_conf = warning(
     "because didnt find",
     "config")
 
+#verticle sliders
+vgui_slider_scroll = verticle_slider(
+    [1200,25],
+    0,
+    len(log_index) - 51,
+    0,
+    750)
 #define group boxes ui elements
 environment = group_box(
     [60,60],
@@ -2480,9 +2507,8 @@ def log_manager():
     
     #draw log scroller if needed
     if (len(log_index) > 51):
-        vgui_slider_scroll = verticle_slider([1200,25],0,len(log_index) - 51,log_var,750)
-        log_var = abs(vgui_slider_scroll.draw())
-    
+        log_var = abs(vgui_slider_scroll.draw(len(log_index) - 51))
+        
     #reverse log entry list to prevent overdraw
     for pointer in range(len(log_index)):
         log_index[len(log_index) - pointer - 1].handle_hover()
@@ -2549,8 +2575,8 @@ def main():
     #internal exit command
     if (vgui_button_exit.draw()):
         now = datetime.now()
-        dt_string = now.strftime("%d,%m,%Y(%H-%M-%S)")
-        save_current_session(dt_string)
+        dt_string = now.strftime("%d,%m,%Y (%H-%M-%S)")
+        save_current_session("SESSION " + dt_string)
         json.dump(Config,open(os.getcwd() + "/config.json","w"))
         pygame.quit()
         sys. exit()
