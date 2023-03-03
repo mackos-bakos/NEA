@@ -1483,7 +1483,7 @@ class verticle_slider:
         
         #draw main slider body and bounding
         pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],13,this.len))
-        pygame.draw.rect(panel, vgui_aux_text_internal, pygame.Rect(this.pos[0],this.val-20,13,20))
+        pygame.draw.rect(panel, vgui_aux_text_internal, pygame.Rect(this.pos[0],this.val-30,13,20))
         
         #mouse variables
         c_vec = pygame.mouse.get_pos()
@@ -1493,7 +1493,7 @@ class verticle_slider:
         if ((c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 13 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + this.len)):
             
             #draw overlay over slider 
-            pygame.draw.rect(panel, (144,144,144), pygame.Rect(this.pos[0],this.val - 20,13,20))
+            pygame.draw.rect(panel, (144,144,144), pygame.Rect(this.pos[0],this.val - 30,13,20))
             
             #if mouse press
             if c_bool:
@@ -1597,7 +1597,10 @@ def handle_metrics():
 def save_current_session(name):
     #create its own folder
     base_folder  = os.getcwd()+"/simulations/"+name
+    graph_folder  = os.getcwd()+"/simulations/"+name+"/graphs"
+    
     os.mkdir(base_folder)
+    os.mkdir(base_folder + "/graphs")
     
     #save herbivore objects
     with open(base_folder + "/herbivores.pickle","wb") as f:
@@ -1631,20 +1634,41 @@ def save_current_session(name):
             #close handle to file (memory leak protection)
             f.close()
 
+    #save graph metrics
+    with open(graph_folder + "/NPP.pickle","wb") as f:
+        #dump objects
+        pickle.dump(NPP_SAMPLES,f)
+        
+        #close handle to file (memory leak protection)
+        f.close()
+    
+    with open(graph_folder + "/TSC.pickle","wb") as f:
+        #dump objects
+        pickle.dump(TSC_SAMPLES,f)
+        
+        #close handle to file (memory leak protection)
+        f.close()
+        
 def load_previous_session(name):
     base_folder  = os.getcwd()+"/simulations/"+name
-    if (not os.path.exists(base_folder)):
+    graph_folder = os.getcwd()+"/simulations/"+name+"/graphs"
+    if (not os.path.exists(base_folder) or not os.path.exists(graph_folder)):
+        print(f"error loading file at {base_folder}, are you trying to run an out of date simulation file?")
         return
     global entity_object_array
     global food_object_array
     global hunter_object_array
     global log_index
+    global NPP_SAMPLES
+    global TSC_SAMPLES
     
     #reset entity lists
     entity_object_array = []
     food_object_array = []
     hunter_object_array = []
     log_index = []
+    TSC_SAMPLES = []
+    NPP_SAMPLES = []
     
     #load herbivore objects
     with open(base_folder + "/herbivores.pickle","rb") as f:
@@ -1677,6 +1701,22 @@ def load_previous_session(name):
             
             #close handle to file (memory leak protection)
             f.close()
+
+    #save graph metrics
+    with open(graph_folder + "/NPP.pickle","rb") as f:
+        #load objects
+        NPP_SAMPLES = pickle.load(f)
+        
+        #close handle to file (memory leak protection)
+        f.close()
+    
+    with open(graph_folder + "/TSC.pickle","rb") as f:
+        #load objects
+        TSC_SAMPLES = pickle.load(f)
+        
+        #close handle to file (memory leak protection)
+        f.close()
+        
     print(f"succesfully loaded {len(entity_object_array)} herbivores {len(hunter_object_array)} carnivores {len(food_object_array)} food and {len(log_index)} logs")
             
 #define ui buttons
