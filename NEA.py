@@ -25,7 +25,6 @@ except:
 
 #define default json values to load
 default = {'layer-1': {'food': 2000, 'herbivores': 10, 'carnivores': 10}}
-vgui_warning_config = False
 
 if os.path.exists(os.getcwd() + "/config.json"):
     #if config file exists
@@ -37,7 +36,7 @@ else:
     json.dump(default, file)
     file.close()
     Config = json.load(open(os.getcwd() + "/config.json","r"))
-    vgui_warning_config = True
+    print(f"new config file created at {os.getcwd()}")
 
 if not os.path.exists(os.getcwd() + "/simulations"):
     os.mkdir(os.getcwd() + "/simulations")
@@ -721,7 +720,8 @@ class herbivore:
             del food_object_array[food_object_array.index(this.target)]
             
             #force to wait for digestion/eating
-            this.wait_for = random.randint(math.ceil(60 / this.bmr),math.ceil(250 / this.bmr))
+            this.wait_for = random.randint(math.ceil(60 / (this.bmr * (1 + (vgui_slider_temperature.get_val() / 100)))),math.ceil(250 / (this.bmr * (1 + (vgui_slider_temperature.get_val() / 100)))))
+            
     def wander(this):
         #wander method
         
@@ -739,7 +739,7 @@ class herbivore:
              this.dummy = None
              
              #force to pause
-             this.wait_for = random.randint(math.ceil(60 / this.bmr),math.ceil(250 / this.bmr))
+             this.wait_for = random.randint(math.ceil(60 / this.bmr),math.ceil(250 / (this.bmr * (1 + (vgui_slider_temperature.get_val() / 100)))))
             
     def kill(this):
         #kill method
@@ -1070,6 +1070,8 @@ class slider:
         panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 50,this.pos[1] + 13))
         
         #convert to useable int
+        return math.floor(((this.val / 100) * (this.max - this.min)) + this.min)
+    def get_val(this):
         return math.floor(((this.val / 100) * (this.max - this.min)) + this.min)
     
 class check_box: 
@@ -1808,29 +1810,6 @@ vgui_slider_ray_add = slider(
     10,
     5)
 
-vgui_slider_photosynth = slider(
-    (660,50),
-    "GPP",
-    1,
-    1000,
-    100)
-
-vgui_slider_birth_muta_chance = slider(
-    (660,250),
-    "mutation chance birth %",
-    0,
-    100,
-    50,
-    True)
-
-vgui_slider_random_muta_chance = slider(
-    (660,200),
-    "mutation chance random %",
-    0,
-    100,
-    10,
-    True)
-
 vgui_slider_sim_slow_val = slider(
     (36,100),
     "slow amount",
@@ -1838,7 +1817,37 @@ vgui_slider_sim_slow_val = slider(
     100,
     5,
     True)
+#selection pressures
+vgui_slider_photosynth = slider(
+    (660,50),
+    "GPP",
+    1,
+    1000,
+    100)
 
+vgui_slider_temperature = slider(
+    (660,75),
+    "temperature delta +",
+    1,
+    100,
+    1,
+    True)
+
+vgui_slider_birth_muta_chance = slider(
+    (660,125),
+    "mutation chance birth %",
+    0,
+    100,
+    50,
+    True)
+
+vgui_slider_random_muta_chance = slider(
+    (660,150),
+    "mutation chance random %",
+    0,
+    100,
+    10,
+    True)
 #define checkbox ui elements
 vgui_checkbox_sim_slow_bool = check_box(
     (1,100),
@@ -2225,7 +2234,7 @@ def sim_thread():
             herbivore.wander()
         
         #update stomach contents due to respiration and metabolic activity
-        herbivore.stomach -= (herbivore.bmr / (100 * lag_comp))
+        herbivore.stomach -= ((herbivore.bmr * (1 + (vgui_slider_temperature.get_val() / 100))) / (100 * lag_comp))
         
         #clamp hormone and stomach values
         herbivore.stomach = clamp(herbivore.stomach,herbivore.stomach_max,0)
@@ -2332,9 +2341,10 @@ def vgui_thread():
     vgui_checkbox_sim_lag_comp.draw()
     vgui_slider_birth_muta_chance.draw()
     vgui_slider_random_muta_chance.draw()
+    vgui_slider_temperature.draw()
     
     #show balance metric
-    draw_visual_bar(balance * 100,1,500,(660,150),"balance",(255,255,0))
+    draw_visual_bar(balance * 100,1,500,(660,600),"balance",(255,255,0))
     
     #render organism images for preview
     ui_herbivore.draw()
@@ -2678,31 +2688,5 @@ while True:
     vgui_button_back = button((1,screen_size[1]-14),"<- back")
     master = group_box((0,0),"",screen_size[0] - 401,screen_size[1] - 1)
     log = group_box((0,0),"",1299,599)
-    
-    #warning loop
-    while vgui_warning_config:
-        
-        #handle pygame events
-        for event in pygame.event.get():
-            
-            if event.type == pygame.QUIT:
-                
-                #dump config file if pygame is exited through task manager or windows
-                json.dump(Config,open(os.getcwd() + "/config.json","w"))
-                
-                #exit thread and program
-                pygame.quit()
-                sys. exit()
-        
-        #draw foreground
-        panel.fill(foreground)
-        
-        #if pressed exit button from warning loop
-        if (vgui_warning_conf.draw()):
-            vgui_warning_config = False
-            
-        #refresh screen
-        pygame.display.flip()
-    
     #call main function
     main()
