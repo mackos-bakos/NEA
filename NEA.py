@@ -123,6 +123,7 @@ balance = 0
 
 #saved simulations
 saved_simulations =  os.listdir(os.getcwd() + "/simulations")
+saved_simulations = saved_simulations[::-1]
 if not saved_simulations:
     saved_simulations = ["no stored simulations!"]
 #genetic code variables
@@ -525,8 +526,8 @@ class food:
         
         #define attributes
         this.pos = [random.randint(150,650),random.randint(50,550)] #random spot in the simulation area
-        this.carbs = random.randint(0,255)    
-        this.protein = random.randint(0,255)
+        this.carbs = random.randint(0 + vgui_slider_nutrients.get_val(),255)    
+        this.protein = random.randint(0 + vgui_slider_nutrients.get_val(),255)
         this.being_eaten = False
         
     def draw(this):
@@ -678,9 +679,9 @@ class herbivore:
         #method to check if a target is in the vision cone 
         
         #create triangle points for vision cone
-        p_1 = point_of_orbit(this.pos, this.rotation + 270, this.sight)
-        p_2 = point_of_orbit(this.pos, this.rotation + 90, this.sight)
-        p_3 = point_of_orbit(this.pos, this.rotation, this.sight)
+        p_1 = point_of_orbit(this.pos, this.rotation + 270, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
+        p_2 = point_of_orbit(this.pos, this.rotation + 90, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
+        p_3 = point_of_orbit(this.pos, this.rotation, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
         
         if (is_in_triangle(p_1,p_2,p_3,target_vec)):
             #if in vision cone
@@ -834,9 +835,9 @@ class carnivore:
         
     def sight_check(this,target_vec):
         #create points of vision cone
-        p_1 = point_of_orbit(this.pos, this.rotation + 270, this.sight)
-        p_2 = point_of_orbit(this.pos, this.rotation + 90, this.sight)
-        p_3 = point_of_orbit(this.pos, this.rotation, this.sight)
+        p_1 = point_of_orbit(this.pos, this.rotation + 270, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
+        p_2 = point_of_orbit(this.pos, this.rotation + 90, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
+        p_3 = point_of_orbit(this.pos, this.rotation, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
         
         #check if is visible
         if (is_in_triangle(p_1,p_2,p_3,target_vec)):
@@ -928,18 +929,6 @@ class dummy:
         #clamp in sim area
         this.pos[0] = clamp(this.pos[0],650,150)
         this.pos[1] = clamp(this.pos[1],550,50)
-        
-for i in range(Config["layer-1"]["food"]):
-    #add starting food
-    food_object_array.append(food())
-    
-for i in range(Config["layer-1"]["herbivores"]):
-    #add starting herbivores
-    entity_object_array.append(herbivore())
-    
-for i in range(Config["layer-1"]["carnivores"]):
-    #add starting carnivores 
-    hunter_object_array.append(carnivore())
 
     
 class button:
@@ -991,7 +980,7 @@ class button:
         
 class slider:
     
-    def __init__(this,position_vec,label_str,min_int,max_int,value_int,invert = False,experimental = False):
+    def __init__(this,position_vec,label_str,min_int,max_int,value_int,invert = False,experimental = False,sign = "",polar = False):
         """
         attributes:
             pos : a 2d vector with x and y coordinates
@@ -1010,6 +999,8 @@ class slider:
         this.min = min_int
         this.max = max_int
         this.val = abs((value_int / (this.max-this.min)) * 100) 
+        this.sign = sign
+        this.polar = polar
         
         #visual attributes
         this.invert = invert
@@ -1065,7 +1056,7 @@ class slider:
                 this.val = c_vec[0] - this.pos[0]
         
         #render font glyphs
-        panel.blit(ui_font_scale_3.render(str(math.floor(((this.val / 100) * (this.max - this.min)) + this.min)), True, vgui_aux_text_external),(this.pos[0]+102,this.pos[1]))
+        panel.blit(ui_font_scale_3.render(str(math.floor(((this.val / 100) * (this.max - this.min)) + this.min)) + this.sign, True, vgui_aux_text_external),(this.pos[0]+102,this.pos[1]))
         txt = ui_font_scale_3.render(this.label, True, vgui_aux_text_external)
         panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 50,this.pos[1] + 13))
         
@@ -1825,29 +1816,58 @@ vgui_slider_photosynth = slider(
     1000,
     100)
 
-vgui_slider_temperature = slider(
+vgui_slider_nutrients = slider(
     (660,75),
-    "temperature delta +",
-    1,
+    "soil nutrients",
+    0,
     100,
-    1,
-    True)
+    0)
+
+vgui_slider_temperature = slider(
+    (660,100),
+    "temperature",
+    -100,
+    100,
+    100,
+    True,
+    sign = "°")
 
 vgui_slider_birth_muta_chance = slider(
-    (660,125),
-    "mutation chance birth %",
+    (660,150),
+    "mutation chance birth",
     0,
     100,
     50,
-    True)
+    True,
+    sign = "%")
 
 vgui_slider_random_muta_chance = slider(
-    (660,150),
-    "mutation chance random %",
+    (660,175),
+    "mutation chance random",
     0,
     100,
     10,
-    True)
+    True,
+    sign = "%")
+
+vgui_slider_smog = slider(
+    (660,225),
+    "smog",
+    1,
+    100,
+    10,
+    True,
+    sign = "%")
+
+vgui_slider_pollution = slider(
+    (660,250),
+    "pollution",
+    1,
+    100,
+    10,
+    True,
+    sign = "%")
+
 #define checkbox ui elements
 vgui_checkbox_sim_slow_bool = check_box(
     (1,100),
@@ -2048,6 +2068,18 @@ ui_food.pos = (6,260)
 #define mutation reasons
 mut_reasons = ["radiation","protein misfold","mitosis error"]
 
+for i in range(Config["layer-1"]["food"]):
+    #add starting food
+    food_object_array.append(food())
+    
+for i in range(Config["layer-1"]["herbivores"]):
+    #add starting herbivores
+    entity_object_array.append(herbivore())
+    
+for i in range(Config["layer-1"]["carnivores"]):
+    #add starting carnivores 
+    hunter_object_array.append(carnivore())
+    
 def sim_thread():
     """start the simulation main thread"""
     
@@ -2155,14 +2187,14 @@ def sim_thread():
         #handle hormone levels
         if herbivore.epinephrine > 0:
             #depreciate epi levels
-            herbivore.epinephrine -= 0.1 / lag_comp
+            herbivore.epinephrine -= (0.1 / lag_comp) * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
             
             #add exhaustion
-            herbivore.cns_depressant += 0.01
+            herbivore.cns_depressant += (0.01)  * abs(((vgui_slider_pollution.get_val()) / 100) - 1) # pollution causes disruption to endocrine system
         
         #remove exhaustion if no epi
         elif (herbivore.cns_depressant > 0):
-            herbivore.cns_depressant -= 0.03
+            herbivore.cns_depressant -= (0.03)  * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
         
         #if should lay egg
         if (herbivore.egg_progress > (900 / balance)):
@@ -2182,7 +2214,7 @@ def sim_thread():
         #if shouldnt lay egg
         elif herbivore.stomach > (herbivore.stomach_max * 0.9):
             #add egg progress
-            herbivore.egg_progress += (1 / lag_comp) * balance
+            herbivore.egg_progress += ((1 / lag_comp) * balance) * abs(((vgui_slider_pollution.get_val()) / 100) - 1) #pollution reduces reproduction.
         
         #if has a target
         if (herbivore.target != None):
@@ -2342,6 +2374,9 @@ def vgui_thread():
     vgui_slider_birth_muta_chance.draw()
     vgui_slider_random_muta_chance.draw()
     vgui_slider_temperature.draw()
+    vgui_slider_nutrients.draw()
+    vgui_slider_smog.draw()
+    vgui_slider_pollution.draw()
     
     #show balance metric
     draw_visual_bar(balance * 100,1,500,(660,600),"balance",(255,255,0))
