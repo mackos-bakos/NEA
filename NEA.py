@@ -130,7 +130,12 @@ if not saved_simulations:
 bases = ["G","A","T","C"]
 
 #metric lists
-sight_average = []
+SIGHT_SAMPLES = []
+BMR_SAMPLES = []
+SPEED_SAMPLES = []
+STOMACH_MAX_SAMPLES = []
+LITTER_SIZE_SAMPLES = []
+
 NPP_SAMPLES = []
 TSC_SAMPLES = []
 
@@ -179,11 +184,11 @@ class log_entry:
         else:
             #less than 50 logs, log scroller not needed
             log_onscreen = log_index
-        
+
         #prevent drawing of offscreen objects
         if this not in log_onscreen:
             return
-        
+
         #render font glyphs
         label_text = ui_font_scale_3.render(this.label_text, True, vgui_aux_text_internal)
         label = ui_font_scale_3.render(this.label, True, (255,255,0)) 
@@ -282,7 +287,7 @@ def read_dna_binary(strand):
     #initialise binary variable
     binary = ""
     
-    for base in strand:
+    for i,base in enumerate(strand):
         #for each character in string (strand)
         if bases.index(base) == 1 or bases.index(base) == 2:
             #if complementary base pair A or T
@@ -554,7 +559,7 @@ class egg:
         pygame.draw.circle(panel,vgui_herbivore_egg,this.pos,3) #draw the egg
         
     def tick(this):
-        
+        """refresh this object"""
         #called every sim tick to update hatching
         
         #decrement countdown
@@ -647,6 +652,7 @@ class herbivore:
         this.refold()
         
     def refold(this):
+        """read dna again"""
         #reset variables after a dna change
         
         this.stomach = 10
@@ -676,6 +682,7 @@ class herbivore:
             pygame.draw.circle(panel,vgui_entity_dead,this.pos,5)#body layer
 
     def sight_check(this,target_vec):
+        """is the target vec in the vision cone?"""
         #method to check if a target is in the vision cone 
         
         #create triangle points for vision cone
@@ -692,6 +699,7 @@ class herbivore:
             return False
         
     def create_move(this):
+        """call every tick to refresh object"""
         #sim called method (external)
         
         try:
@@ -724,6 +732,7 @@ class herbivore:
             this.wait_for = random.randint(math.ceil(60 / (this.bmr * (1 + (vgui_slider_temperature.get_val() / 100)))),math.ceil(250 / (this.bmr * (1 + (vgui_slider_temperature.get_val() / 100)))))
             
     def wander(this):
+        """alternative refresh method"""
         #wander method
         
         if (this.dummy == None):
@@ -943,7 +952,7 @@ class button:
         #init attributes
         this.pos = position_vec 
         this.label = str(label_str)
-        
+        this.s_bool = False
     def draw(this):
         #draw method
         
@@ -957,9 +966,9 @@ class button:
         #check for hover
         if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 60 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 13):
             #check for l=Louse press
-            if (c_bool):
+            if (c_bool and not this.s_bool):
                 #clicked
-                
+                this.s_bool = True
                 return True
             
             else:
@@ -975,6 +984,7 @@ class button:
                 return False
             
         #render font glyphs to center
+        this.s_bool = c_bool
         txt = font_alt.render(this.label, True, vgui_aux_text_internal)
         panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + 30,this.pos[1]))
         
@@ -1522,71 +1532,118 @@ class group_box:
         #render main text font glyph
         panel.blit(this.label,(this.pos[0] + (this.b // 5),this.pos[1] - 5))
 
+def trim_list_data(List, max_items, trim_factor):
+    if len(List) > max_items:
+        for i,data_entry in enumerate(List):
+            if i % trim_factor == 0:
+                
+                #delete every data point per trim factor
+                del List[i]
+    return List
+
+def plot_graph(List,colour,x_pos,y_pos,width):
+    #null check to stop max producing an error
+    if not List:
+        return
+    #grab max val in List
+    List_max = max(List)
+    
+    for i,data_point in enumerate(List):
+        
+        #draw graph point
+        pygame.draw.rect(panel, colour, pygame.Rect(x_pos + i,y_pos - math.ceil((data_point / List_max) * width),1,1))
+        
+        try:
+            #join graph points with line
+            pygame.draw.line(panel, colour,(x_pos + i,y_pos - math.ceil((data_point / List_max) * width)),(1350 + i + 1,y_pos - math.ceil((List[i + 1] / List_max) * width)))
+        
+        except:
+            #catch if theres no next data point to join
+            continue
+        
 def handle_metrics():
     """handle sim metrics"""
     
     #grab sample data from global frame
     global NPP_SAMPLES
+    global TSC_SAMPLES
+    global SIGHT_SAMPLES
+    global BMR_SAMPLES
+    global SPEED_SAMPLES
+    global STOMACH_MAX_SAMPLES
+    global LITTER_SIZE_SAMPLES
+
+    #screen height is 800px
     
-    #draw graph area
-    pygame.draw.rect(panel, vgui_fore, pygame.Rect(1350,10,300,300))
+    #draw graph 1 area
+    pygame.draw.rect(panel, vgui_fore, pygame.Rect(1350,75,300,300))
     
-    #render info text as font glyph
-    panel.blit(ui_font_scale_3.render("NPP TREND - RED", True, vgui_aux_text_external),(1350,310))
-    panel.blit(ui_font_scale_3.render("TSC TREND - BLUE", True, vgui_aux_text_external),(1560,310))
+    #draw graph 2 area
+    pygame.draw.rect(panel, vgui_fore, pygame.Rect(1350,425,300,300))
     
-    #dont show metrics if theres no data to show
-    try:
-        NPP_HEIGHT = max(NPP_SAMPLES)
-        TSC_HEIGHT = max(TSC_SAMPLES)
-        
-    except:
-        return
+    #render info text as font glyph for graph 1
+    panel.blit(ui_font_scale_3.render("NPP TREND", True, vgui_aux_text_external),(1250,75))
+    panel.blit(ui_font_scale_3.render("TSC TREND", True, vgui_aux_text_external),(1250,95))
+    
+    #graph 1 header
+    txt = ui_font_scale_3.render("ENVIRONMENT GRAPH", True, vgui_aux_text_external)
+    panel.blit(txt,(1500 - (txt.get_width() / 2),55))
+    
+    #render info text as font glyph for graph 2
+    panel.blit(ui_font_scale_3.render("LITTER SIZE TREND", True, vgui_aux_text_external),(1250,430))
+    panel.blit(ui_font_scale_3.render("STOMACH TREND", True, vgui_aux_text_external),(1250,450))
+    panel.blit(ui_font_scale_3.render("SPEED TREND", True, vgui_aux_text_external),(1250,470))
+    panel.blit(ui_font_scale_3.render("BMR TREND", True, vgui_aux_text_external),(1250,490))
+    panel.blit(ui_font_scale_3.render("SIGHT TREND", True, vgui_aux_text_external),(1250,510))
+
+    #graph 2 header
+    txt = ui_font_scale_3.render("GENE GRAPH - (will take ages to show a trend)", True, vgui_aux_text_external)
+    panel.blit(txt,(1500 - (txt.get_width() / 2),405))
+    
+    #render preview colour rects
+    pygame.draw.rect(panel, (0,255,255), pygame.Rect(1230,431,8,8))
+    pygame.draw.rect(panel, (255,0,255), pygame.Rect(1230,451,8,8))
+    pygame.draw.rect(panel, (0,0,255), pygame.Rect(1230,471,8,8))
+    pygame.draw.rect(panel, (0,255,0), pygame.Rect(1230,491,8,8))
+    pygame.draw.rect(panel, (255,0,0), pygame.Rect(1230,511,8,8))
+
+    #graph 1 previews
+    pygame.draw.rect(panel, (0,0,255), pygame.Rect(1230,76,8,8))
+    pygame.draw.rect(panel, (255,0,0), pygame.Rect(1230,96,8,8))
     
     #handle when the graph points start going offscreen
-    if len(NPP_SAMPLES) > 300:
-        for data_entry in NPP_SAMPLES:
-            if NPP_SAMPLES.index(data_entry) % 2 == 0:
-                
-                #delete every second data point
-                del NPP_SAMPLES[NPP_SAMPLES.index(data_entry)]
-                
-    if len(TSC_SAMPLES) > 300:
-        for data_entry in TSC_SAMPLES:
-            if TSC_SAMPLES.index(data_entry) % 2 == 0:
-                
-                #delete every second data point
-                del TSC_SAMPLES[TSC_SAMPLES.index(data_entry)]
+    NPP_SAMPLES = trim_list_data(NPP_SAMPLES, 300, 2)
+    TSC_SAMPLES = trim_list_data(TSC_SAMPLES, 300, 2)
+    SIGHT_SAMPLES = trim_list_data(SIGHT_SAMPLES, 300, 2)
+    BMR_SAMPLES = trim_list_data(BMR_SAMPLES, 300, 2)
+    SPEED_SAMPLES = trim_list_data(SPEED_SAMPLES, 300, 2)
+    STOMACH_MAX_SAMPLES = trim_list_data(STOMACH_MAX_SAMPLES, 300, 2)
+    LITTER_SIZE_SAMPLES = trim_list_data(LITTER_SIZE_SAMPLES, 300, 2)
     
-    
-    #iterate through sample data
-    for data_point in NPP_SAMPLES:
-        
-        #draw graph point
-        pygame.draw.rect(panel, (255,0,0), pygame.Rect(1350 + NPP_SAMPLES.index(data_point),310 - math.ceil((data_point / NPP_HEIGHT) * 300),1,1))
-        
-        try:
-            #join graph points with line
-            pygame.draw.line(panel,(255,0,0),(1350 + NPP_SAMPLES.index(data_point),310 - math.ceil((data_point / NPP_HEIGHT) * 300)),(1350 + NPP_SAMPLES.index(data_point) + 1,310 - math.ceil((NPP_SAMPLES[NPP_SAMPLES.index(data_point) + 1] / NPP_HEIGHT) * 300)))
-            
-        except:
-            #catch if theres no next data point to join
-            continue
-            
-    for data_point in TSC_SAMPLES:
-        
-        #draw graph point
-        pygame.draw.rect(panel, (0,0,255), pygame.Rect(1350 + TSC_SAMPLES.index(data_point),310 - math.ceil((data_point / TSC_HEIGHT) * 300),1,1))
-        
-        try:
-            #join graph points with line
-            pygame.draw.line(panel,(0,0,255),(1350 + TSC_SAMPLES.index(data_point),310 - math.ceil((data_point / TSC_HEIGHT) * 300)),(1350 + TSC_SAMPLES.index(data_point) + 1,310 - math.ceil((TSC_SAMPLES[TSC_SAMPLES.index(data_point) + 1] / TSC_HEIGHT) * 300)))
-        
-        except:
-            #catch if theres no next data point to join
-            continue
+    #iterate plot graphs for sample data (graph 1)
+    plot_graph(NPP_SAMPLES,(255,0,0),1350,375,300)
+    plot_graph(TSC_SAMPLES,(0,0,255),1350,375,300)
+
+    #graph 2
+    plot_graph(SIGHT_SAMPLES,(255,0,0),1350,725,300)
+    plot_graph(BMR_SAMPLES,(0,255,0),1350,725,300)
+    plot_graph(SPEED_SAMPLES,(0,0,255),1350,725,300)
+    plot_graph(STOMACH_MAX_SAMPLES,(255,0,255),1350,725,300)
+    plot_graph(LITTER_SIZE_SAMPLES,(0,255,255),1350,725,300)
+
+
+
+
 
 #save current simulation session
+def dump_objects(file,data,base_folder):
+    with open(base_folder + f"/{file}.pickle","wb") as f:
+            #dump objects
+            pickle.dump(data,f)
+            
+            #close handle to file (memory leak protection)
+            f.close()
+            
 def save_current_session(name):
     #create its own folder
     base_folder  = os.getcwd()+"/simulations/"+name
@@ -1596,52 +1653,41 @@ def save_current_session(name):
     os.mkdir(base_folder + "/graphs")
     
     #save herbivore objects
-    with open(base_folder + "/herbivores.pickle","wb") as f:
-            #dump objects
-            pickle.dump(entity_object_array,f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    dump_objects("herbivores",entity_object_array,base_folder)
             
     #save carnivore objects
-    with open(base_folder + "/carnivores.pickle","wb") as f:
-            #dump objects
-            pickle.dump(hunter_object_array,f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    dump_objects("carnivores",hunter_object_array,base_folder)
             
     #save food objects
-    with open(base_folder + "/food.pickle","wb") as f:
-            #dump objects
-            pickle.dump(food_object_array,f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    dump_objects("food",food_object_array,base_folder)
 
     #save log objects
-    with open(base_folder + "/log.pickle","wb") as f:
-            #dump objects
-            pickle.dump(log_index,f)
+    dump_objects("log",log_index,base_folder)
+
+    #save graph metrics
+    dump_objects("NPP",NPP_SAMPLES,graph_folder)
+
+    dump_objects("TSC",TSC_SAMPLES,graph_folder)
+
+    dump_objects("SIGHT",SIGHT_SAMPLES,graph_folder)
+
+    dump_objects("BMR",BMR_SAMPLES,graph_folder)
+
+    dump_objects("SPEED",SPEED_SAMPLES,graph_folder)
+
+    dump_objects("STOMACH_MAX",STOMACH_MAX_SAMPLES,graph_folder)
+
+    dump_objects("LITTER_SIZE",LITTER_SIZE_SAMPLES,graph_folder)
+
+def load_objects(file,data,base_folder):
+    with open(base_folder + f"/{file}.pickle","rb") as f:
+            #load objects
+            data = pickle.load(f)
             
             #close handle to file (memory leak protection)
             f.close()
+    return data
 
-    #save graph metrics
-    with open(graph_folder + "/NPP.pickle","wb") as f:
-        #dump objects
-        pickle.dump(NPP_SAMPLES,f)
-        
-        #close handle to file (memory leak protection)
-        f.close()
-    
-    with open(graph_folder + "/TSC.pickle","wb") as f:
-        #dump objects
-        pickle.dump(TSC_SAMPLES,f)
-        
-        #close handle to file (memory leak protection)
-        f.close()
-        
 def load_previous_session(name):
     base_folder  = os.getcwd()+"/simulations/"+name
     graph_folder = os.getcwd()+"/simulations/"+name+"/graphs"
@@ -1649,66 +1695,43 @@ def load_previous_session(name):
         print(f"error loading file at {base_folder}, are you trying to run an out of date simulation file?")
         return
     global entity_object_array
-    global food_object_array
     global hunter_object_array
+    global food_object_array
     global log_index
     global NPP_SAMPLES
     global TSC_SAMPLES
-    
-    #reset entity lists
-    entity_object_array = []
-    food_object_array = []
-    hunter_object_array = []
-    log_index = []
-    TSC_SAMPLES = []
-    NPP_SAMPLES = []
+    global SIGHT_SAMPLES
+    global BMR_SAMPLES
+    global SPEED_SAMPLES
+    global STOMACH_MAX_SAMPLES
+    global LITTER_SIZE_SAMPLES
     
     #load herbivore objects
-    with open(base_folder + "/herbivores.pickle","rb") as f:
-            #load objects
-            entity_object_array = pickle.load(f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    entity_object_array=load_objects("herbivores",entity_object_array,base_folder)
             
     #load carnivore objects
-    with open(base_folder + "/carnivores.pickle","rb") as f:
-            #load objects
-            hunter_object_array = pickle.load(f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    hunter_object_array=load_objects("carnivores",hunter_object_array,base_folder)
             
     #load food objects
-    with open(base_folder + "/food.pickle","rb") as f:
-            #load objects
-            food_object_array = pickle.load(f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
-            
-    #load food objects
-    with open(base_folder + "/log.pickle","rb") as f:
-            #load objects
-            log_index = pickle.load(f)
-            
-            #close handle to file (memory leak protection)
-            f.close()
+    food_object_array=load_objects("food",food_object_array,base_folder)
 
-    #save graph metrics
-    with open(graph_folder + "/NPP.pickle","rb") as f:
-        #load objects
-        NPP_SAMPLES = pickle.load(f)
-        
-        #close handle to file (memory leak protection)
-        f.close()
-    
-    with open(graph_folder + "/TSC.pickle","rb") as f:
-        #load objects
-        TSC_SAMPLES = pickle.load(f)
-        
-        #close handle to file (memory leak protection)
-        f.close()
+    #load log objects
+    log_index=load_objects("log",log_index,base_folder)
+
+    #load graph metrics
+    NPP_SAMPLES=load_objects("NPP",NPP_SAMPLES,graph_folder)
+
+    TSC_SAMPLES=load_objects("TSC",TSC_SAMPLES,graph_folder)
+
+    SIGHT_SAMPLES=load_objects("SIGHT",SIGHT_SAMPLES,graph_folder)
+
+    BMR_SAMPLES=load_objects("BMR",BMR_SAMPLES,graph_folder)
+
+    SPEED_SAMPLES=load_objects("SPEED",SPEED_SAMPLES,graph_folder)
+
+    STOMACH_MAX_SAMPLES=load_objects("STOMACH_MAX",STOMACH_MAX_SAMPLES,graph_folder)
+
+    LITTER_SIZE_SAMPLES=load_objects("LITTER_SIZE",LITTER_SIZE_SAMPLES,graph_folder)
         
     print(f"succesfully loaded {len(entity_object_array)} herbivores {len(hunter_object_array)} carnivores {len(food_object_array)} food and {len(log_index)} logs")
             
@@ -2088,7 +2111,11 @@ def sim_thread():
     global NPP_SAMPLES
     global NPP
     global TSC
-    global sight_average
+    global SIGHT_SAMPLES
+    global BMR_SAMPLES
+    global SPEED_SAMPLES
+    global STOMACH_MAX_SAMPLES
+    global LITTER_SIZE_SAMPLES
     
     #set volatile metrics back
     NPP = 0
@@ -2346,17 +2373,26 @@ def sim_thread():
         NPP_SAMPLES.append(NPP)
         TSC_SAMPLES.append(TSC)
         
-        #calculate sight average
-        total = 0
+        #calculate gene averages
+        sight_total = 0
+        bmr_total = 0
+        speed_total = 0
+        litter_size_total = 0
+        stomach_max_total = 0
+        
         for gene_holder in entity_object_array:
-            total+=gene_holder.sight
-        
+            sight_total+=gene_holder.sight
+            bmr_total+=gene_holder.bmr
+            speed_total+=gene_holder.speed
+            litter_size_total+=gene_holder.litter_size
+            stomach_max_total+=gene_holder.stomach_max
+            
         #find average sight
-        an_average = total / len(entity_object_array)
-        
-        #add to sample data
-        sight_average.append(an_average)
-        
+        SIGHT_SAMPLES.append(sight_total / len(entity_object_array))
+        BMR_SAMPLES.append(bmr_total / len(entity_object_array))
+        SPEED_SAMPLES.append(speed_total / len(entity_object_array))
+        LITTER_SIZE_SAMPLES.append(litter_size_total / len(entity_object_array))
+        STOMACH_MAX_SAMPLES.append(stomach_max_total / len(entity_object_array))
     
 def vgui_thread():
     """compute external ui elements"""
