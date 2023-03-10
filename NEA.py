@@ -1478,14 +1478,14 @@ class verticle_slider:
         this.min = mini
         this.max = maxi
         this.val = length - abs((val / (this.max-this.min)) * length)
-        this.len = length
+        this.len = length + 40
         
     def draw(this,maxi):
         this.max = maxi
         #draw method
         
         #draw main slider body and bounding
-        pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],13,this.len))
+        pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],13,this.len - 40))
         pygame.draw.rect(panel, vgui_aux_text_internal, pygame.Rect(this.pos[0],this.val-30,13,20))
         
         #mouse variables
@@ -1493,7 +1493,7 @@ class verticle_slider:
         c_bool = pygame.mouse.get_pressed()[0]
         
         #if mouse hovered over slider area
-        if ((c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 13 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + this.len)):
+        if ((c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 13 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + (this.len - 48))):
             
             #draw overlay over slider 
             pygame.draw.rect(panel, (144,144,144), pygame.Rect(this.pos[0],this.val - 30,13,20))
@@ -2629,6 +2629,7 @@ def log_manager():
     #draw log scroller if needed
     if (len(log_index) > 51):
         log_var = abs(vgui_slider_scroll.draw(len(log_index) - 51))
+        
         
     #reverse log entry list to prevent overdraw
     for pointer in range(len(log_index)):
