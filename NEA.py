@@ -138,6 +138,8 @@ LITTER_SIZE_SAMPLES = []
 
 NPP_SAMPLES = []
 TSC_SAMPLES = []
+HERBIVORE_SAMPLES = []
+CARNIVORE_SAMPLES = []
 
 #log variables
 log_var = 0
@@ -541,14 +543,14 @@ class food:
         
 class egg:
     
-    def __init__(this,pos,genes,intron):
+    def __init__(this,pos,genes,intron, count_down = 3000):
         #constructor method
         
         #define attributes
         this.pos = pos
         this.genes = genes
         this.intron = intron
-        this.count_down = 3000
+        this.count_down = count_down
         this.log = log_entry("egg laid: progress: " + str(this.count_down)," parent",str(this.genes)) # add a dynamic log entry showing the egg progress 
         
         #add to log index
@@ -662,19 +664,19 @@ class herbivore:
         this.speed = read_dna_binary(this.genes[3])
         this.litter_size = read_dna_binary(this.genes[5]) + 1
         
-    def draw(this,custom = False,custom_pos = None):
+    def draw(this,override_clamp = False):
         #draw method
         
         #clamps
-        this.speed = clamp(this.speed,100,0)
-        this.pos = [this.pos[0],this.pos[1]]
-        this.pos[0] = clamp(this.pos[0],650,150)
-        this.pos[1] = clamp(this.pos[1],550,50)
+        if not override_clamp:
+            this.speed = clamp(this.speed,100,0)
+            this.pos = [this.pos[0],this.pos[1]]
+            this.pos[0] = clamp(this.pos[0],650,150)
+            this.pos[1] = clamp(this.pos[1],550,50)
         #calculate nose position
         this.nose = point_of_orbit(this.pos,this.rotation,10)
         
         #draw nose and body
-
         pygame.draw.line(panel,vgui_entity_nose,this.pos,this.nose,3)#nose layer
         pygame.draw.circle(panel,vgui_entity_herbivore,this.pos,5)#body layer
         
@@ -759,7 +761,7 @@ class herbivore:
         #decay method 
         
         #visual bleeding
-        pygame.draw.line(panel,(255,0,0),this.pos,point_of_orbit(this.pos,random.randint(0,360),random.randint(1,10)),10)
+        #pygame.draw.line(panel,(255,0,0),this.pos,point_of_orbit(this.pos,random.randint(0,360),random.randint(1,10)),10)
         
         #if fully decomposed
         if (this.nutrition < 0):
@@ -1567,12 +1569,15 @@ def handle_metrics():
     #grab sample data from global frame
     global NPP_SAMPLES
     global TSC_SAMPLES
+    global HERBIVORE_SAMPLES
+    global CARNIVORE_SAMPLES
+    
     global SIGHT_SAMPLES
     global BMR_SAMPLES
     global SPEED_SAMPLES
     global STOMACH_MAX_SAMPLES
     global LITTER_SIZE_SAMPLES
-
+    
     #screen height is 800px
     
     #draw graph 1 area
@@ -1584,6 +1589,8 @@ def handle_metrics():
     #render info text as font glyph for graph 1
     panel.blit(ui_font_scale_3.render("NPP TREND", True, vgui_aux_text_external),(1250,75))
     panel.blit(ui_font_scale_3.render("TSC TREND", True, vgui_aux_text_external),(1250,95))
+    panel.blit(ui_font_scale_3.render("HERBIVORE TREND", True, vgui_aux_text_external),(1250,115))
+    panel.blit(ui_font_scale_3.render("CARNIVORE TREND", True, vgui_aux_text_external),(1250,135))
     
     #graph 1 header
     txt = ui_font_scale_3.render("ENVIRONMENT GRAPH", True, vgui_aux_text_external)
@@ -1610,10 +1617,15 @@ def handle_metrics():
     #graph 1 previews
     pygame.draw.rect(panel, (0,0,255), pygame.Rect(1230,76,8,8))
     pygame.draw.rect(panel, (255,0,0), pygame.Rect(1230,96,8,8))
+    pygame.draw.rect(panel, (0,255,0), pygame.Rect(1230,116,8,8))
+    pygame.draw.rect(panel, (255,255,0), pygame.Rect(1230,136,8,8))
     
     #handle when the graph points start going offscreen
     NPP_SAMPLES = trim_list_data(NPP_SAMPLES, 300, 2)
     TSC_SAMPLES = trim_list_data(TSC_SAMPLES, 300, 2)
+    HERBIVORE_SAMPLES = trim_list_data(HERBIVORE_SAMPLES, 300, 2)
+    CARNIVORE_SAMPLES = trim_list_data(CARNIVORE_SAMPLES, 300, 2)
+    
     SIGHT_SAMPLES = trim_list_data(SIGHT_SAMPLES, 300, 2)
     BMR_SAMPLES = trim_list_data(BMR_SAMPLES, 300, 2)
     SPEED_SAMPLES = trim_list_data(SPEED_SAMPLES, 300, 2)
@@ -1621,16 +1633,18 @@ def handle_metrics():
     LITTER_SIZE_SAMPLES = trim_list_data(LITTER_SIZE_SAMPLES, 300, 2)
     
     #iterate plot graphs for sample data (graph 1)
-    plot_graph(NPP_SAMPLES,(255,0,0),1350,375,300)
-    plot_graph(TSC_SAMPLES,(0,0,255),1350,375,300)
-
+    plot_graph(NPP_SAMPLES,(0,0,255),1350,375,300)
+    plot_graph(TSC_SAMPLES,(255,0,0),1350,375,300)
+    plot_graph(HERBIVORE_SAMPLES,(0,255,0),1350,375,300)
+    plot_graph(CARNIVORE_SAMPLES,(255,255,0),1350,375,300)
+    
     #graph 2
     plot_graph(SIGHT_SAMPLES,(255,0,0),1350,725,300)
     plot_graph(BMR_SAMPLES,(0,255,0),1350,725,300)
     plot_graph(SPEED_SAMPLES,(0,0,255),1350,725,300)
     plot_graph(STOMACH_MAX_SAMPLES,(255,0,255),1350,725,300)
     plot_graph(LITTER_SIZE_SAMPLES,(0,255,255),1350,725,300)
-
+    
 
 
 
@@ -1669,6 +1683,10 @@ def save_current_session(name):
 
     dump_objects("TSC",TSC_SAMPLES,graph_folder)
 
+    dump_objects("HERBIVORE",HERBIVORE_SAMPLES,graph_folder)
+
+    dump_objects("CARNIVORE",CARNIVORE_SAMPLES,graph_folder)
+
     dump_objects("SIGHT",SIGHT_SAMPLES,graph_folder)
 
     dump_objects("BMR",BMR_SAMPLES,graph_folder)
@@ -1678,6 +1696,7 @@ def save_current_session(name):
     dump_objects("STOMACH_MAX",STOMACH_MAX_SAMPLES,graph_folder)
 
     dump_objects("LITTER_SIZE",LITTER_SIZE_SAMPLES,graph_folder)
+    
 
 def load_objects(file,data,base_folder):
     with open(base_folder + f"/{file}.pickle","rb") as f:
@@ -1698,8 +1717,12 @@ def load_previous_session(name):
     global hunter_object_array
     global food_object_array
     global log_index
+    
     global NPP_SAMPLES
     global TSC_SAMPLES
+    global HERBIVORE_SAMPLES
+    global CARNIVORE_SAMPLES
+    
     global SIGHT_SAMPLES
     global BMR_SAMPLES
     global SPEED_SAMPLES
@@ -1722,7 +1745,11 @@ def load_previous_session(name):
     NPP_SAMPLES=load_objects("NPP",NPP_SAMPLES,graph_folder)
 
     TSC_SAMPLES=load_objects("TSC",TSC_SAMPLES,graph_folder)
-
+    
+    HERBIVORE_SAMPLES=load_objects("HERBIVORE",HERBIVORE_SAMPLES,graph_folder)
+    
+    CARNIVORE_SAMPLES=load_objects("CARNIVORE",CARNIVORE_SAMPLES,graph_folder)
+    
     SIGHT_SAMPLES=load_objects("SIGHT",SIGHT_SAMPLES,graph_folder)
 
     BMR_SAMPLES=load_objects("BMR",BMR_SAMPLES,graph_folder)
@@ -2076,17 +2103,15 @@ program_bounding = group_box(
 
 #define preview organisms
 ui_herbivore = herbivore()
-with open(os.getcwd() + "simulations.txt","ab") as f:
-    pickle.dump(ui_herbivore,f)
-    f.close()
 ui_carnivore = carnivore()
-ui_egg = egg((6,200),None,None)
 ui_food = food()
 
 #update positions from randomly generated ones
-ui_herbivore.pos = (6,220)
-ui_carnivore.pos = (6,240)
-ui_food.pos = (6,260)
+ui_egg = egg((100,670),None,None)
+ui_herbivore.pos = (100,690)
+ui_carnivore.pos = (100,710)
+ui_food.pos = (100,730)
+
 
 #define mutation reasons
 mut_reasons = ["radiation","protein misfold","mitosis error"]
@@ -2372,6 +2397,8 @@ def sim_thread():
         #add sample data to lists
         NPP_SAMPLES.append(NPP)
         TSC_SAMPLES.append(TSC)
+        HERBIVORE_SAMPLES.append(len(entity_object_array))
+        CARNIVORE_SAMPLES.append(len(hunter_object_array))
         
         #calculate gene averages
         sight_total = 0
@@ -2418,23 +2445,23 @@ def vgui_thread():
     draw_visual_bar(balance * 100,1,500,(660,600),"balance",(255,255,0))
     
     #render organism images for preview
-    ui_herbivore.draw()
+    ui_herbivore.draw(True)
     ui_carnivore.draw()
     ui_egg.draw()
     ui_food.draw()
     
     #render organism preview text as font glyph
-    txt = ui_font_scale_3.render("-egg ", True, vgui_aux_text_internal)
-    panel.blit(txt,(26,200))
+    txt = ui_font_scale_3.render("-EGG ", True, vgui_aux_text_internal)
+    panel.blit(txt,(120,670))
     
-    txt = ui_font_scale_3.render("-herbivore", True, vgui_aux_text_internal)
-    panel.blit(txt,(26,220))
+    txt = ui_font_scale_3.render("-HERBIVORE", True, vgui_aux_text_internal)
+    panel.blit(txt,(120,690))
 
-    txt = ui_font_scale_3.render("-carnivore ", True, vgui_aux_text_internal)
-    panel.blit(txt,(26,240))
+    txt = ui_font_scale_3.render("-CARNIVORE ", True, vgui_aux_text_internal)
+    panel.blit(txt,(120,710))
 
-    txt = ui_font_scale_3.render("-food", True, vgui_aux_text_internal)
-    panel.blit(txt,(26,260))
+    txt = ui_font_scale_3.render("-FOOD", True, vgui_aux_text_internal)
+    panel.blit(txt,(120,730))
     
 def simulation():
     """links computation of simulation and ui elements"""
@@ -2710,11 +2737,11 @@ def main():
         lag_comp = ((math.ceil(1 / (time.time() - sample_time))) / 100)
         
         #calculate processing time
-        t2p = (time.time() - sample_time)
+        #t2p = (time.time() - sample_time)
         
         #render font glyph to show processing time
-        txt = ui_font_scale_3.render(f"processing time {t2p} ", True, vgui_aux_text_internal)
-        panel.blit(txt,(400 - ((txt.get_width() + txt.get_width()) / 2),600))
+        #txt = ui_font_scale_3.render(f"processing time {t2p} ", True, vgui_aux_text_internal)
+        #panel.blit(txt,(400 - ((txt.get_width() + txt.get_width()) / 2),600))
     
     #draw main program border
     program_bounding.draw()
