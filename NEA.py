@@ -1655,29 +1655,101 @@ def handle_metrics():
     pygame.draw.rect(panel, (255,255,0), pygame.Rect(1230,136,8,8))
     
     #handle when the graph points start going offscreen
-    NPP_SAMPLES = trim_list_data(NPP_SAMPLES, 300, 2)
-    TSC_SAMPLES = trim_list_data(TSC_SAMPLES, 300, 2)
-    HERBIVORE_SAMPLES = trim_list_data(HERBIVORE_SAMPLES, 300, 2)
-    CARNIVORE_SAMPLES = trim_list_data(CARNIVORE_SAMPLES, 300, 2)
+    NPP_SAMPLES = trim_list_data(
+        NPP_SAMPLES,
+        300,
+        2)
+    TSC_SAMPLES = trim_list_data(
+        TSC_SAMPLES,
+        300,
+        2)
+    HERBIVORE_SAMPLES = trim_list_data(
+        HERBIVORE_SAMPLES,
+        300,
+        2)
+    CARNIVORE_SAMPLES = trim_list_data(
+        CARNIVORE_SAMPLES,
+        300,
+        2)
     
-    SIGHT_SAMPLES = trim_list_data(SIGHT_SAMPLES, 300, 2)
-    BMR_SAMPLES = trim_list_data(BMR_SAMPLES, 300, 2)
-    SPEED_SAMPLES = trim_list_data(SPEED_SAMPLES, 300, 2)
-    STOMACH_MAX_SAMPLES = trim_list_data(STOMACH_MAX_SAMPLES, 300, 2)
-    LITTER_SIZE_SAMPLES = trim_list_data(LITTER_SIZE_SAMPLES, 300, 2)
+    SIGHT_SAMPLES = trim_list_data(
+        SIGHT_SAMPLES,
+        300,
+        2)
+    BMR_SAMPLES = trim_list_data(
+        BMR_SAMPLES,
+        300,
+        2)
+    SPEED_SAMPLES = trim_list_data(
+        SPEED_SAMPLES,
+        300,
+        2)
+    STOMACH_MAX_SAMPLES = trim_list_data(
+        STOMACH_MAX_SAMPLES,
+        300,
+        2)
+    LITTER_SIZE_SAMPLES = trim_list_data(
+        LITTER_SIZE_SAMPLES,
+        300,
+        2)
     
     #iterate plot graphs for sample data (graph 1)
-    plot_graph(NPP_SAMPLES,(0,0,255),1350,375,300)
-    plot_graph(TSC_SAMPLES,(255,0,0),1350,375,300)
-    plot_graph(HERBIVORE_SAMPLES,(0,255,0),1350,375,300)
-    plot_graph(CARNIVORE_SAMPLES,(255,255,0),1350,375,300)
+    plot_graph(
+        NPP_SAMPLES,
+               (0,0,255),
+               1350,
+               375,
+               300)
+    plot_graph(
+        TSC_SAMPLES,
+               (255,0,0),
+               1350,
+               375,
+               300)
+    plot_graph(
+        HERBIVORE_SAMPLES,
+               (0,255,0),
+               1350,
+               375,
+               300)
+    plot_graph(
+        CARNIVORE_SAMPLES,
+               (255,255,0),
+               1350,
+               375,
+               300)
     
     #graph 2
-    plot_graph(SIGHT_SAMPLES,(255,0,0),1350,725,300)
-    plot_graph(BMR_SAMPLES,(0,255,0),1350,725,300)
-    plot_graph(SPEED_SAMPLES,(0,0,255),1350,725,300)
-    plot_graph(STOMACH_MAX_SAMPLES,(255,0,255),1350,725,300)
-    plot_graph(LITTER_SIZE_SAMPLES,(0,255,255),1350,725,300)
+    plot_graph(
+        SIGHT_SAMPLES,
+               (255,0,0),
+               1350,
+               725,
+               300)
+    plot_graph(
+        BMR_SAMPLES,
+               (0,255,0),
+               1350,
+               725,
+               300)
+    plot_graph(
+        SPEED_SAMPLES,
+               (0,0,255),
+               1350,
+               725,
+               300)
+    plot_graph(
+        STOMACH_MAX_SAMPLES,
+               (255,0,255),
+               1350,
+               725,
+               300)
+    plot_graph(
+        LITTER_SIZE_SAMPLES,
+               (0,255,255),
+               1350,
+               725,
+               300)
     
 
 
@@ -2888,7 +2960,7 @@ while True:
         #reinject new organisms if natural balance is not maintained
         for i in range(50):
              entity_object_array.append(herbivore())
-        for i in range(5):
+        for i in range(15):
              hunter_object_array.append(carnivore())
     
     
