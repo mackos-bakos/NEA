@@ -661,7 +661,7 @@ class herbivore:
         this.stomach_max = read_dna_binary(this.genes[0]) + 20
         this.bmr = read_dna_binary(this.genes[1]) + 1
         this.sight = read_dna_binary(this.genes[2])
-        this.speed = read_dna_binary(this.genes[3])
+        this.speed = read_dna_binary(this.genes[3]) + 1
         this.litter_size = read_dna_binary(this.genes[5]) + 1
         
     def draw(this,override_clamp = False):
@@ -814,24 +814,28 @@ class carnivore:
         this.egg_progress = 0
         this.dead = False
         this.wait_for = 0
+        this.nutrition = 100
+        this.nurturing = False
+        this.nur_progress = 0
+        this.replication_progress = 0
         
         # genetic code definitions
         this.strand_stomach = generate_dna_sequence(7)
-        this.strand_bmr = generate_dna_sequence(3)
+        this.strand_bmr = generate_dna_sequence(2)
         this.strand_sight = generate_dna_sequence(6)
-        this.strand_speed = generate_dna_sequence(3)
+        this.strand_speed = generate_dna_sequence(2)
         this.strand_reprod = generate_dna_sequence(8)
-        this.strand_litter_size = generate_dna_sequence(1)
+
+        this.introgenic_dna = generate_dna_sequence(25) # dna that doesnt do anything significant, will make this add visual remarks on species later
         
         #read functional proteins and their effects
-        this.sight = read_dna_binary(this.strand_sight) + 30
+        this.sight = read_dna_binary(this.strand_sight) + 40
         this.target = None
         this.dummy = None
         this.stomach_max = read_dna_binary(this.strand_stomach) + 70
         this.stomach = this.stomach_max / 2
-        this.speed = read_dna_binary(this.strand_speed) - 1
+        this.speed = read_dna_binary(this.strand_speed)
         this.bmr = read_dna_binary(this.strand_bmr)+1
-        this.litter_size = read_dna_binary(this.strand_litter_size)+1
 
         
     def draw(this):
@@ -844,6 +848,12 @@ class carnivore:
         pygame.draw.line(panel,vgui_entity_nose,this.pos,this.nose,3)#nose layer
         pygame.draw.circle(panel,vgui_entity_carnivore,this.pos,5)#body layer
         
+        if (this.dead):
+            pygame.draw.circle(panel,(255,255,0),this.pos,5)#body layer
+
+        if (this.nurturing):
+            pygame.draw.circle(panel,(255,255,255),this.pos,5)#body layer
+            
     def sight_check(this,target_vec):
         #create points of vision cone
         p_1 = point_of_orbit(this.pos, this.rotation + 270, (this.sight * abs((vgui_slider_smog.get_val() / 100) - 1)))
@@ -926,8 +936,27 @@ class carnivore:
         this.dead = True
         
     def decay(this):
-        #decay method *UNUSED
-        x = 2
+        #decay method 
+        
+        #visual bleeding
+        #pygame.draw.line(panel,(255,0,0),this.pos,point_of_orbit(this.pos,random.randint(0,360),random.randint(1,10)),10)
+        
+        #if fully decomposed
+        if (this.nutrition < 0):
+            del hunter_object_array[hunter_object_array.index(this)]
+            return
+        
+        #remove biomass from decaying corpse
+        this.nutrition -= 0.1 / lag_comp
+        
+        #dont add food 10% of the time
+        if (random.randint(1,200) != 20):
+            return
+        
+        #add new food around corpse to return biomass to environment
+        decay = food()
+        decay.pos = [this.pos[0] + 2 + random.randint(-7,5),this.pos[1] + 2 + random.randint(-7,5)]
+        food_object_array.append(decay)
         
 class dummy:
     
@@ -2325,29 +2354,68 @@ def sim_thread():
         herbivore.cns_depressant = clamp(herbivore.cns_depressant,1,0)
     
     #for each predator in list
-    for carnivore in hunter_object_array:
+    for carn in hunter_object_array:
         #draw predator
-        carnivore.draw()
+        carn.draw()
         
         #if is dead, should decay to release biomass
-        if (carnivore.dead):
-            carnivore.decay()
+        if (carn.dead):
+            carn.decay()
+            continue
+        if random.randint(1,int(150000 * lag_comp)) < 5 * balance:
+            carn.kill()
+            log_index.append(log_entry("carnivore diseased"," genes",str(carn.introgenic_dna)))
+        if (carn.nurturing and carn.stomach > (carn.stomach_max * 0.8)):
+            carn.nur_progress += ((1 / lag_comp) * balance) * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
+
+            if (carn.nur_progress > 4500 * balance):
+                #reset to previous
+                carn.nur_progress = 0
+                carn.nurturing = False
+                carn.replication_progress = 0
+                #... create new carnivore child 90% of the time
+                if random.randint(1,100) < 90*balance:
+                    infant = carnivore()
+                    infant.pos = [carn.pos[0],carn.pos[1]]
+                    hunter_object_array.append(infant)
+                
+                    #log birth
+                    log_index.append(log_entry("carnivore born"," genes",str(infant.introgenic_dna)))
+                else:
+                    #still birth
+                    log_index.append(log_entry("carnivore still birth"," ",""))
+
+
+        elif (carn.replication_progress > 1800 * balance):
+            carn.nurturing = True
+        elif carn.stomach > (carn.stomach_max * 0.9):
+            carn.replication_progress += ((1 / lag_comp) * balance) * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
+            
+        #if waiting, should tick down waiting period
+        if (carn.wait_for > 0):
+            carn.wait_for -= 1 / lag_comp
             continue
         
-        #if waiting, should tick down waiting period
-        if (carnivore.wait_for > 0):
-            carnivore.wait_for -= 1 / lag_comp
+        if (carn.stomach <= 0):
+            
+            #kill carnivore
+            carn.dead = True
+            
+            #add to log info
+            log_index.append(log_entry("carnivore starved"," genes",str(carn.introgenic_dna)))
+            
+            #exclude from computation
             continue
         
         #if has a target, should move to that target
-        if (carnivore.target != None):
-            carnivore.create_move()
+        if (carn.target != None):
+            carn.create_move()
         
         #if doesnt, will find new one
         else:
             
             #calculate radian that the organism can see
-            if (carnivore.nose[0] > carnivore.pos[0]):
+            if (carn.nose[0] > carn.pos[0]):
                 radian = 0
                 
             else:
@@ -2360,36 +2428,36 @@ def sim_thread():
                     continue
                 
                 #shouldnt select targets not in visible radian, excludes
-                if (radian == 0 and prey.pos[0] < carnivore.pos[0]):
+                if (radian == 0 and prey.pos[0] < carn.pos[0]):
                     continue
                     
-                if (radian == 1 and prey.pos[0] > carnivore.pos[0]):
+                if (radian == 1 and prey.pos[0] > carn.pos[0]):
                     continue
                 
                 #shouldnt select targets in rough vision cone rect, excludes
-                if abs(prey.pos[0] - carnivore.pos[0]) > carnivore.sight:
+                if abs(prey.pos[0] - carn.pos[0]) > carn.sight:
                     continue
                     
-                if abs(prey.pos[1] - carnivore.pos[1]) > (carnivore.sight // 2):
+                if abs(prey.pos[1] - carn.pos[1]) > (carn.sight // 2):
                     continue
                 
                 #shouldnt select target it cant see, excludes
-                if (not carnivore.sight_check(prey.pos)):
+                if (not carn.sight_check(prey.pos)):
                     continue
                 
                 #update target
-                carnivore.target = prey
+                carn.target = prey
                 
                 break
             
             #wanders if cant find prey
-            carnivore.wander()
+            carn.wander()
         
         #decrement stomach due to metabolic activity and respiration
-        carnivore.stomach -= (carnivore.bmr / (100 * lag_comp))
+        carn.stomach -= (carn.bmr / (100 * lag_comp))
         
         #clamp stomach value
-        carnivore.stomach = clamp(carnivore.stomach,carnivore.stomach_max,0)
+        carn.stomach = clamp(carn.stomach,carn.stomach_max,0)
     
     #every 15th tick
     if tick % 15 == 0:
@@ -2770,16 +2838,18 @@ while True:
     try:
         
         #try calculate simulation balance metric based off herbivores and eggs as a proportion of carnivores
-        balance = (len(hunter_object_array) / (((summ + (len(egg_object_array) // 2))) * 4) + 1)
+        balance = (len(hunter_object_array) / (((summ + (len(egg_object_array) // 2))) * 2) + 1)
         
     except:
         
         #debug info
-        print(f"exception caught, {summ}, {egg_object_array} , {hunter_object_array}")
+        print(f"failed to maintain ecological balance, reinjecting (make sure the selection pressures are configured properly)")
         
         #reinject new organisms if natural balance is not maintained
-        for i in range(15):
+        for i in range(50):
              entity_object_array.append(herbivore())
+        for i in range(5):
+             hunter_object_array.append(carnivore())
     
     
     #redefine main ui elements based off screen size 
