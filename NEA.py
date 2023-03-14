@@ -24,7 +24,7 @@ except:
     sys.exit()
 
 #define default json values to load
-default = {'layer-1': {'food': 2000, 'herbivores': 10, 'carnivores': 10}}
+default = {'layer-1': {'food': 5000, 'herbivores': 40, 'carnivores': 15}}
 
 if os.path.exists(os.getcwd() + "/config.json"):
     #if config file exists
@@ -632,7 +632,7 @@ class herbivore:
         #constructor method
         
         #initialise attributes
-        this.genes = [generate_dna_sequence(7),generate_dna_sequence(2),generate_dna_sequence(6),generate_dna_sequence(2),generate_dna_sequence(8),generate_dna_sequence(1)]
+        this.genes = [generate_dna_sequence(7),generate_dna_sequence(2),generate_dna_sequence(6),generate_dna_sequence(2),generate_dna_sequence(8),generate_dna_sequence(2)]
         this.pos = [random.randint(150,650),random.randint(50,550)]
         this.rotation = 0 # vision cone rotation
         this.introgenic_dna = generate_dna_sequence(25) # dna that doesnt do anything significant, will make this add visual remarks on species later 
@@ -820,22 +820,25 @@ class carnivore:
         this.replication_progress = 0
         
         # genetic code definitions
-        this.strand_stomach = generate_dna_sequence(7)
-        this.strand_bmr = generate_dna_sequence(2)
-        this.strand_sight = generate_dna_sequence(6)
-        this.strand_speed = generate_dna_sequence(2)
-        this.strand_reprod = generate_dna_sequence(8)
-
+        this.genes = [generate_dna_sequence(7),generate_dna_sequence(2),generate_dna_sequence(6),generate_dna_sequence(2),generate_dna_sequence(8),generate_dna_sequence(1)]
+        
         this.introgenic_dna = generate_dna_sequence(25) # dna that doesnt do anything significant, will make this add visual remarks on species later
         
         #read functional proteins and their effects
-        this.sight = read_dna_binary(this.strand_sight) + 40
         this.target = None
         this.dummy = None
-        this.stomach_max = read_dna_binary(this.strand_stomach) + 70
+        
+        this.refold()
+        
+    def refold(this):
+        """read dna again"""
+        #reset variables after a dna change
+    
+        this.speed = read_dna_binary(this.genes[3])
+        this.sight = read_dna_binary(this.genes[3]) + 40
+        this.stomach_max = read_dna_binary(this.genes[0]) + 70
         this.stomach = this.stomach_max / 2
-        this.speed = read_dna_binary(this.strand_speed)
-        this.bmr = read_dna_binary(this.strand_bmr)+1
+        this.bmr = read_dna_binary(this.genes[1])+1
 
         
     def draw(this):
@@ -852,7 +855,7 @@ class carnivore:
             pygame.draw.circle(panel,(255,255,0),this.pos,5)#body layer
 
         if (this.nurturing):
-            pygame.draw.circle(panel,(255,255,255),this.pos,5)#body layer
+            pygame.draw.circle(panel,(255,100,0),this.pos,5)#body layer
             
     def sight_check(this,target_vec):
         #create points of vision cone
@@ -1584,6 +1587,7 @@ def plot_graph(List,colour,x_pos,y_pos,width):
         #draw graph point
         pygame.draw.rect(panel, colour, pygame.Rect(x_pos + i,y_pos - math.ceil((data_point / List_max) * width),1,1))
         
+        
         try:
             #join graph points with line
             pygame.draw.line(panel, colour,(x_pos + i,y_pos - math.ceil((data_point / List_max) * width)),(1350 + i + 1,y_pos - math.ceil((List[i + 1] / List_max) * width)))
@@ -1591,6 +1595,7 @@ def plot_graph(List,colour,x_pos,y_pos,width):
         except:
             #catch if theres no next data point to join
             continue
+    panel.blit(ui_font_scale_3.render(f"{int(List[len(List)-1])}", True, vgui_aux_text_external),(x_pos + len(List)-1,y_pos - math.ceil((List[len(List)-1] / List_max) * width)))
         
 def handle_metrics():
     """handle sim metrics"""
@@ -1893,21 +1898,21 @@ vgui_slider_photosynth = slider(
     "GPP",
     1,
     1000,
-    100)
+    500)
 
 vgui_slider_nutrients = slider(
     (660,75),
     "soil nutrients",
     0,
     100,
-    0)
+    50)
 
 vgui_slider_temperature = slider(
     (660,100),
     "temperature",
     -100,
     100,
-    100,
+    115,
     True,
     sign = "°")
 
@@ -1934,7 +1939,7 @@ vgui_slider_smog = slider(
     "smog",
     1,
     100,
-    10,
+    20,
     True,
     sign = "%")
 
@@ -1943,7 +1948,7 @@ vgui_slider_pollution = slider(
     "pollution",
     1,
     100,
-    10,
+    1,
     True,
     sign = "%")
 
@@ -2231,7 +2236,7 @@ def sim_thread():
             old_strand = herbivore.genes[index_to_patch]
             
             #add log entry showing mutation info
-            log_index.append(log_entry("a mutation has occured due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+            log_index.append(log_entry("a mutation has occured in a herbivore due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
             
             
             #patch genes 
@@ -2365,6 +2370,7 @@ def sim_thread():
         if random.randint(1,int(150000 * lag_comp)) < 5 * balance:
             carn.kill()
             log_index.append(log_entry("carnivore diseased"," genes",str(carn.introgenic_dna)))
+        
         if (carn.nurturing and carn.stomach > (carn.stomach_max * 0.8)):
             carn.nur_progress += ((1 / lag_comp) * balance) * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
 
@@ -2385,12 +2391,46 @@ def sim_thread():
                     #still birth
                     log_index.append(log_entry("carnivore still birth"," ",""))
 
-
         elif (carn.replication_progress > 1800 * balance):
             carn.nurturing = True
         elif carn.stomach > (carn.stomach_max * 0.9):
             carn.replication_progress += ((1 / lag_comp) * balance) * abs(((vgui_slider_pollution.get_val()) / 100) - 1)
+
+        if ((tick % 2000 * lag_comp) == 0) and random.randint(0,100) < vgui_slider_random_muta_chance.val:
             
+            #find pointer to genes to mutate
+            index_to_patch = carn.genes.index(random.choice(carn.genes))
+            
+            #define mutated gene
+            mutated = create_mutation(carn.genes[index_to_patch])
+            
+            try:
+                #try and reference second base in sequence
+                mutated[1]
+                
+            except:
+                #would return single base not as list
+                
+                #redefine as list
+                mutated = [mutated]
+                
+                #change mutation type
+                mutated.append("UNEDITABLE")
+            
+            
+            #save previous strand for logging
+            old_strand = carn.genes[index_to_patch]
+            
+            #add log entry showing mutation info
+            log_index.append(log_entry("a mutation in a carnivore has occured due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+            
+            
+            #patch genes 
+            carn.genes[index_to_patch] = mutated[0]
+            
+            #update functional proteins
+            carn.refold()
+        
         #if waiting, should tick down waiting period
         if (carn.wait_for > 0):
             carn.wait_for -= 1 / lag_comp
@@ -2838,7 +2878,7 @@ while True:
     try:
         
         #try calculate simulation balance metric based off herbivores and eggs as a proportion of carnivores
-        balance = (len(hunter_object_array) / (((summ + (len(egg_object_array) // 2))) * 2) + 1)
+        balance = (len(hunter_object_array) / ((summ) * 2) + 1)
         
     except:
         
