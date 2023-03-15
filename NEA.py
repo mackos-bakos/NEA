@@ -1595,7 +1595,7 @@ def plot_graph(List,colour,x_pos,y_pos,width):
         except:
             #catch if theres no next data point to join
             continue
-    panel.blit(ui_font_scale_3.render(f"{int(List[len(List)-1])}", True, vgui_aux_text_external),(x_pos + len(List)-1,y_pos - math.ceil((List[len(List)-1] / List_max) * width)))
+    panel.blit(ui_font_scale_3.render(f"{int(List[len(List)-1])}", True,colour),(x_pos + len(List)-1 + 2,y_pos - math.ceil((List[len(List)-1] / List_max) * width) - 4))
         
 def handle_metrics():
     """handle sim metrics"""
@@ -1895,7 +1895,9 @@ vgui_button_entity_list_manager = button(
 vgui_load_sim = button(
     (100,200),
     "load")
-
+vgui_save_sim = button(
+    (100,215),
+    "save new")
 #define ui sliders
 vgui_slider_food = slider(
     (100,75),
@@ -2207,6 +2209,11 @@ program_bounding = group_box(
     1699,
     799)
 
+load_tray = group_box(
+    [75,175],
+    "simulation loading tray",
+    300,
+    75)
 #define preview organisms
 ui_herbivore = herbivore()
 ui_carnivore = carnivore()
@@ -2424,7 +2431,7 @@ def sim_thread():
             herbivore.wander()
         
         #update stomach contents due to respiration and metabolic activity
-        herbivore.stomach -= ((herbivore.bmr * (1 + (vgui_slider_temperature.get_val() / 100))) / (100 * lag_comp))
+        herbivore.stomach -= herbivore.speed - ((herbivore.bmr * (1 + (vgui_slider_temperature.get_val() / 100))) / (100 * lag_comp)) #discourage high speed values to prevent the simulation going crazy (try to)
         
         #clamp hormone and stomach values
         herbivore.stomach = clamp(herbivore.stomach,herbivore.stomach_max,0)
@@ -2793,6 +2800,11 @@ def main_menu():
     vgui_saved_simulations.draw()
     if (vgui_load_sim.draw()):
         load_previous_session(saved_simulations[vgui_saved_simulations.selected])
+    if (vgui_save_sim.draw()):
+        now = datetime.now()
+        dt_string = now.strftime("%d,%m,%Y (%H-%M-%S)")
+        save_current_session(f"MANUAL {dt_string}")
+    load_tray.draw()
     #handle x axis collision with border
     if (x + img_size[0] >= 1700) or (x <= 0):
         x_speed = -x_speed
@@ -2905,7 +2917,7 @@ def main():
     if (vgui_button_exit.draw()):
         now = datetime.now()
         dt_string = now.strftime("%d,%m,%Y (%H-%M-%S)")
-        save_current_session("SESSION " + dt_string)
+        save_current_session("AUTOMATIC " + dt_string)
         json.dump(Config,open(os.getcwd() + "/config.json","w"))
         pygame.quit()
         sys. exit()
