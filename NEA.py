@@ -593,7 +593,7 @@ class egg:
                     mutated.append("SHORT") # temporary measure to stop genetic material being completely deleted
                 
                 #add to log
-                log_index.append(log_entry("a mutation has occured on birth! type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+                log_index.append(log_entry("mutation on birth (herbivore egg) " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
                 
                 #update genes
                 infant.genes[index_to_patch] = mutated[0]
@@ -2315,7 +2315,7 @@ def sim_thread():
             old_strand = herbivore.genes[index_to_patch]
             
             #add log entry showing mutation info
-            log_index.append(log_entry("a mutation has occured in a herbivore due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+            log_index.append(log_entry("new mutation (herbivore) due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
             
             
             #patch genes 
@@ -2584,7 +2584,7 @@ def sim_thread():
         #add sample data to lists
         NPP_SAMPLES.append(NPP)
         TSC_SAMPLES.append(TSC)
-        HERBIVORE_SAMPLES.append(len(entity_object_array))
+        HERBIVORE_SAMPLES.append(len([entity for entity in entity_object_array if not entity.dead]))
         CARNIVORE_SAMPLES.append(len(hunter_object_array))
         
         #calculate gene averages
@@ -2947,17 +2947,9 @@ log_index.append(log_entry("a project made by henry frodsham"," read ","please f
 
 while True:
     #main loop
-    
-    #iterate through entity list
-    summ = 0
-    for i in entity_object_array:
-        
-        #exclude dead organisms
-        if i.dead:
-            continue
-        
-        #add counter for living organism
-        summ += 1
+
+    #get num of not dead
+    summ = (len([entity for entity in entity_object_array if not entity.dead]))
         
     try:
         
