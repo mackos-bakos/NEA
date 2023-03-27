@@ -7,6 +7,7 @@ _|      _|  _|    _|      _|        _|_|    _|    _|  _|    _|  _|_|_|_|    _|_|
                                                                                                                                                                                                         
                                                                       _|_|_|_|_|                                                                                    _|_|_|_|_|       
 """
+#pygame.draw.polygon(screen, RED, [(200, 100), (300, 200), (100, 200)])
 try:
     import pygame
     import random
@@ -96,7 +97,7 @@ vgui_ray_beam = (0,255,0)
 vgui_group_fore = (190,190,190)
 vgui_entity_herbivore = (0,250,0)
 vgui_herbivore_egg = (221,100,221)
-vgui_entity_dead = (70,70,70)
+vgui_entity_dead = (160,160,160)
 vgui_entity_carnivore = (250,0,0)
 vgui_entity_nose = (0,0,0)
 
@@ -397,15 +398,14 @@ def point_of_orbit(host_vec,rotation_float,radius_int):
     #return the position with the radius offset alongside from the host vector
     return [(host_vec[0] + radius_int * c),(host_vec[1] + radius_int * s)]
 
-def trace_ray(from_vec,to_vec,array):
+def trace_visible_check(from_vec,to_vec):
     """check for occlusion between two points"""
     
     #initialise setting variables
-    lazy_trace_threshold = 0
-    ray_skip_mult = 1 # skip a ray step per trace
-    ray_visualize = False
-    ray_ignore_groups = [False,False]
-    ray_hitbox_add = 0 # remove ray precision
+    lazy_trace_threshold = vgui_slider_ray_lazy.get_val()
+    ray_skip_mult = vgui_slider_ray_mult.get_val() # skip a ray step per trace
+    ray_visualize = vgui_checkbox_ray_visualise.state
+    ray_hitbox_add =  vgui_slider_ray_add.get_val()# remove ray precision
     ray_angle = rad_to_deg(from_vec,to_vec) #angle to trace
     
     for ray in range(500 - lazy_trace_threshold):
@@ -414,28 +414,26 @@ def trace_ray(from_vec,to_vec,array):
         #calculate new point of ray
         RayPos = point_of_orbit(from_vec,ray_angle,ray*ray_skip_mult)
         
-        if (not ray_ignore_groups[0]):
-            #group 0, food objects
             
-            for food_obj in array:
-                #repeat for each food object
-                if (distance_to(RayPos,food_obj.pos) > 3):
-                    #didnt collide with non target
-                    continue 
+        for food_obj in food_object_array:
+            #repeat for each food object
+            if (distance_to(RayPos,food_obj.pos) > 3):
+                 #didnt collide with non target
+                continue 
                     
-                if (food_obj.pos == to_vec):
-                    #collided with intended target
-                    pygame.draw.line(panel,vgui_ray_beam,from_vec,to_vec)
-                    return True
+            if (food_obj.pos == to_vec):
+                 #collided with intended target
+                pygame.draw.line(panel,vgui_ray_beam,from_vec,to_vec)
+                return True
                 
-                else:
-                    #draw line from original trace point to ray position to show where ray was occluded
-                    if (ray_visualize):
-                        #draw lines too current raypos
-                        pygame.draw.line(panel,vgui_ray_beam,from_vec,to_vec)
-                        pygame.draw.line(panel,vgui_ray_broken,RayPos,to_vec)
+            else:
+                #draw line from original trace point to ray position to show where ray was occluded
+                if (ray_visualize):
+                    #draw lines too current raypos
+                    pygame.draw.line(panel,vgui_ray_beam,from_vec,to_vec)
+                    pygame.draw.line(panel,vgui_ray_broken,RayPos,to_vec)
                         
-                    return False
+                return False
                 
 def get_next_move_to(from_vec,rotation_float,radius = 0.2):
     """calculate the next path step from one coordinate to another by rotation"""
@@ -694,6 +692,11 @@ class herbivore:
         
         if (is_in_triangle(p_1,p_2,p_3,target_vec)):
             #if in vision cone
+            if vgui_checkbox_ray_master.state:
+                if (trace_visible_check(this.pos,target_vec)):
+                    return True
+                else:
+                    return False
             return True
         
         else:
@@ -1149,7 +1152,7 @@ class check_box:
             pygame.draw.rect(panel, vgui_color_ON, pygame.Rect(this.pos[0] + 3,this.pos[1] + 3,8,8))
         
         #check if hovered
-        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 10 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 10):
+        if (c_vec[0] > this.pos[0] and c_vec[0] < this.pos[0] + 15 and c_vec[1] > this.pos[1] and c_vec[1] < this.pos[1] + 15):
             #used by other classes
             this.hovered = True
             
@@ -1342,7 +1345,7 @@ class selection_interface_s:
         #draw main selection option 
         pygame.draw.rect(panel, vgui_bounding, pygame.Rect(this.pos[0] - 1,this.pos[1] - 1,52+ recession,12))
         pygame.draw.rect(panel, vgui_fore, pygame.Rect(this.pos[0],this.pos[1],50+ recession,10))
-
+        
         #render font glyphs for main selection
         panel.blit(txt,(this.pos[0] - (txt.get_width() / 2) + (25 + (recession // 2)),this.pos[1]))
         #if selection interface is opened
@@ -1867,7 +1870,52 @@ def load_previous_session(name):
     LITTER_SIZE_SAMPLES=load_objects("LITTER_SIZE",LITTER_SIZE_SAMPLES,graph_folder)
         
     print(f"succesfully loaded {len(entity_object_array)} herbivores {len(hunter_object_array)} carnivores {len(food_object_array)} food and {len(log_index)} logs")
-            
+
+def new_session():
+    global food_object_array
+    global entity_object_array
+    global hunter_object_array
+    global log_index
+
+    global NPP_SAMPLES
+    global TSC_SAMPLES
+    global HERBIVORE_SAMPLES
+    global CARNIVORE_SAMPLES
+    
+    global SIGHT_SAMPLES
+    global BMR_SAMPLES
+    global SPEED_SAMPLES
+    global STOMACH_MAX_SAMPLES
+    global LITTER_SIZE_SAMPLES
+    
+    log_index = []
+    food_object_array = []
+    entity_object_array = []
+    hunter_object_array = []
+    
+    SIGHT_SAMPLES = []
+    BMR_SAMPLES = []
+    SPEED_SAMPLES = []
+    STOMACH_MAX_SAMPLES = []
+    LITTER_SIZE_SAMPLES = []
+
+    NPP_SAMPLES = []
+    TSC_SAMPLES = []
+    HERBIVORE_SAMPLES = []
+    CARNIVORE_SAMPLES = []
+    for i in range(Config["layer-1"]["food"]):
+        #add starting food
+        food_object_array.append(food())
+        
+    for i in range(Config["layer-1"]["herbivores"]):
+        #add starting herbivores
+        entity_object_array.append(herbivore())
+        
+    for i in range(Config["layer-1"]["carnivores"]):
+        #add starting carnivores 
+        hunter_object_array.append(carnivore())
+
+    log_index.append(log_entry("---NEW SESSION---"))
 #define ui buttons
 vgui_test_button = color_selector(
    (500,500),
@@ -1878,16 +1926,16 @@ vgui_button_back = button(
     (1,589),
     "<- back")
 vgui_button_exit = button(
-    (749,1),
+    (1640,1),
     " quit ")
 vgui_button_start = button(
-    (375,300),
+    (375,400),
     "start")
 vgui_button_options = button(
-    (375,315),
+    (375,415),
     "options")
 vgui_button_theme = button(
-    (375,330),
+    (375,430),
     "theme")
 vgui_button_entity_list_manager = button(
     (375,345),
@@ -1898,6 +1946,9 @@ vgui_load_sim = button(
 vgui_save_sim = button(
     (100,215),
     "save new")
+vgui_regenerate_sim = button(
+    (100,230),
+    "soft restart")
 #define ui sliders
 vgui_slider_food = slider(
     (100,75),
@@ -1907,7 +1958,7 @@ vgui_slider_food = slider(
     Config["layer-1"]["food"])
 
 xspeed = slider(
-    (20,75),
+    (20,575),
     "change logo speed x ",
     0,
     10,
@@ -1916,7 +1967,7 @@ xspeed = slider(
     True)
 
 yspeed = slider(
-    (20,100),
+    (20,600),
     "change logo speed y ",
     0,10,
     y_speed,
@@ -1943,21 +1994,24 @@ vgui_slider_ray_lazy = slider(
     "lazy tracing",
     0,
     400,
-    20)
+    10,
+    True)
 
 vgui_slider_ray_mult = slider(
     (500,100),
     "speed multiplier",
     1,
     10,
-    1)
+    0,
+    True)
 
 vgui_slider_ray_add = slider(
     (500,125),
     "drunk ray",
     1,
     10,
-    5)
+    0,
+    True)
 
 vgui_slider_sim_slow_val = slider(
     (36,100),
@@ -2048,18 +2102,18 @@ vgui_checkbox_visualise_math = check_box(
     False)
 
 vgui_checkbox_ray_master = check_box(
-    (100,195),
-    "ray tracing",
+    (500,175),
+    "ray tracing WIP",
     False)
 
 #define colour selection interface ui elements
 vgui_color_ray_visualise_1 = color_selector(
-    (570,160),
+    (470,212),
     vgui_ray_beam,
     "beam")
 
 vgui_color_ray_visualise_2 = color_selector(
-    (570,212),
+    (590,212),
     vgui_ray_broken,
     "broken")
 
@@ -2154,11 +2208,11 @@ vgui_color_OFF_state = color_selector(
     "vgui_color_OFF")
 
 #define single selection interfaces
-vgui_slc_ray_ignore = selection_interface_m(
-    (500,212),
-    ["food","creatures"],
-    [False,False],
-    "ignore")
+#vgui_slc_ray_ignore = selection_interface_m(
+#   (500,212),
+#   ["food","creatures"],
+#   [False,False],
+#   "ignore")
 
 vgui_color_blindness = selection_interface_s(
     (350,50),
@@ -2186,15 +2240,15 @@ vgui_slider_scroll = verticle_slider(
     750)
 #define group boxes ui elements
 environment = group_box(
-    [60,60],
+    [80,60],
     "environment",
-    180,
-    200)
+    165,
+    100)
 
 raytracing = group_box(
     [460,60],
     "ray tracing",
-    180,
+    200,
     200)
 
 log_box = group_box(
@@ -2213,34 +2267,32 @@ load_tray = group_box(
     [75,175],
     "simulation loading tray",
     300,
-    75)
+    85)
 #define preview organisms
 ui_herbivore = herbivore()
 ui_carnivore = carnivore()
 ui_food = food()
-
+ui_carnivore_pregnant = carnivore()
+ui_carnivore_pregnant.nurturing = True
+ui_carnivore_dead = carnivore()
+ui_carnivore_dead.dead = True
+ui_herbivore_dead = herbivore()
+ui_herbivore_dead.dead = True
 #update positions from randomly generated ones
 ui_egg = egg((100,670),None,None)
 ui_herbivore.pos = (100,690)
 ui_carnivore.pos = (100,710)
+ui_carnivore_pregnant.pos =  (250,710)
+ui_carnivore_dead.pos = (250,730)
+ui_herbivore_dead.pos = (250,690)
 ui_food.pos = (100,730)
 
 
 #define mutation reasons
 mut_reasons = ["radiation","protein misfold","mitosis error"]
 
-for i in range(Config["layer-1"]["food"]):
-    #add starting food
-    food_object_array.append(food())
-    
-for i in range(Config["layer-1"]["herbivores"]):
-    #add starting herbivores
-    entity_object_array.append(herbivore())
-    
-for i in range(Config["layer-1"]["carnivores"]):
-    #add starting carnivores 
-    hunter_object_array.append(carnivore())
-    
+
+new_session()
 def sim_thread():
     """start the simulation main thread"""
     
@@ -2315,7 +2367,7 @@ def sim_thread():
             old_strand = herbivore.genes[index_to_patch]
             
             #add log entry showing mutation info
-            log_index.append(log_entry("new mutation (herbivore) due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+            log_index.append(log_entry("herbivore mutation due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
             
             
             #patch genes 
@@ -2501,7 +2553,7 @@ def sim_thread():
             old_strand = carn.genes[index_to_patch]
             
             #add log entry showing mutation info
-            log_index.append(log_entry("a mutation in a carnivore has occured due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
+            log_index.append(log_entry("mutated carnivore due to " + random.choice(mut_reasons) + " type: " + mutated[1]," details",str(str(old_strand) + "  ->  " +  str(mutated[0])) + " -> " + str(read_dna_binary(old_strand)) + " -> " + str(read_dna_binary(mutated[0]))))
             
             
             #patch genes 
@@ -2634,21 +2686,33 @@ def vgui_thread():
     #render organism images for preview
     ui_herbivore.draw(True)
     ui_carnivore.draw()
+    ui_carnivore_pregnant.draw()
+    ui_carnivore_dead.draw()
+    ui_herbivore_dead.draw(True)
     ui_egg.draw()
     ui_food.draw()
     
     #render organism preview text as font glyph
     txt = ui_font_scale_3.render("-EGG ", True, vgui_aux_text_internal)
-    panel.blit(txt,(120,670))
+    panel.blit(txt,(120,664))
     
     txt = ui_font_scale_3.render("-HERBIVORE", True, vgui_aux_text_internal)
-    panel.blit(txt,(120,690))
+    panel.blit(txt,(120,686))
+    
+    txt = ui_font_scale_3.render("-DEAD HERBIVORE ", True, vgui_aux_text_internal)
+    panel.blit(txt,(270,686))
 
     txt = ui_font_scale_3.render("-CARNIVORE ", True, vgui_aux_text_internal)
-    panel.blit(txt,(120,710))
-
+    panel.blit(txt,(120,706))
+    
+    txt = ui_font_scale_3.render("-PREGNANT CARNIVORE ", True, vgui_aux_text_internal)
+    panel.blit(txt,(270,706))
+    
+    txt = ui_font_scale_3.render("-DEAD CARNIVORE ", True, vgui_aux_text_internal)
+    panel.blit(txt,(270,726))
+    
     txt = ui_font_scale_3.render("-FOOD", True, vgui_aux_text_internal)
-    panel.blit(txt,(120,730))
+    panel.blit(txt,(120,724))
     
 def simulation():
     """links computation of simulation and ui elements"""
@@ -2708,7 +2772,9 @@ def options():
     vgui_checkbox_ray_visualise.draw()
     vgui_color_ray_visualise_1.draw()
     vgui_color_ray_visualise_2.draw()
-    vgui_slc_ray_ignore.draw()
+    
+    #redundant
+    #vgui_slc_ray_ignore.draw()
     
     #update selected colour variables
     vgui_ray_beam = vgui_color_ray_visualise_1.col 
@@ -2804,6 +2870,8 @@ def main_menu():
         now = datetime.now()
         dt_string = now.strftime("%d,%m,%Y (%H-%M-%S)")
         save_current_session(f"MANUAL {dt_string}")
+    if (vgui_regenerate_sim.draw()):
+        new_session()
     load_tray.draw()
     #handle x axis collision with border
     if (x + img_size[0] >= 1700) or (x <= 0):
@@ -2942,8 +3010,6 @@ def main():
     pygame.display.flip()
 
     
-#add an info log entry
-log_index.append(log_entry("a project made by henry frodsham"," read ","please familiarise yourself with the ui elements in options before starting the simulation"))
 
 while True:
     #main loop
