@@ -655,7 +655,7 @@ class herbivore:
         """read dna again"""
         #reset variables after a dna change
         
-        this.stomach = 10
+        this.stomach = 25
         this.stomach_max = read_dna_binary(this.genes[0]) + 20
         this.bmr = read_dna_binary(this.genes[1]) + 1
         this.sight = read_dna_binary(this.genes[2])
@@ -671,6 +671,7 @@ class herbivore:
             this.pos = [this.pos[0],this.pos[1]]
             this.pos[0] = clamp(this.pos[0],650,150)
             this.pos[1] = clamp(this.pos[1],550,50)
+            this.litter_size = clamp(this.litter_size,50,0)
         #calculate nose position
         this.nose = point_of_orbit(this.pos,this.rotation,10)
         
@@ -2046,7 +2047,7 @@ vgui_slider_temperature = slider(
 
 vgui_slider_birth_muta_chance = slider(
     (660,150),
-    "mutation chance birth",
+    "mutagen on birth",
     0,
     100,
     50,
@@ -2055,7 +2056,7 @@ vgui_slider_birth_muta_chance = slider(
 
 vgui_slider_random_muta_chance = slider(
     (660,175),
-    "mutation chance random",
+    "mutagen chance",
     0,
     100,
     10,
@@ -2263,6 +2264,12 @@ program_bounding = group_box(
     1699,
     799)
 
+key_bounds = group_box(
+    [70,650],
+    "organism key",
+    340,
+    100)
+
 load_tray = group_box(
     [75,175],
     "simulation loading tray",
@@ -2289,7 +2296,7 @@ ui_food.pos = (100,730)
 
 
 #define mutation reasons
-mut_reasons = ["radiation","protein misfold","mitosis error"]
+mut_reasons = ["radiation"]
 
 
 new_session()
@@ -2713,7 +2720,8 @@ def vgui_thread():
     
     txt = ui_font_scale_3.render("-FOOD", True, vgui_aux_text_internal)
     panel.blit(txt,(120,724))
-    
+
+    key_bounds.draw()
 def simulation():
     """links computation of simulation and ui elements"""
     #grab current tab and sim ticks from global frame
@@ -3015,12 +3023,12 @@ while True:
     #main loop
 
     #get num of not dead
-    summ = (len([entity for entity in entity_object_array if not entity.dead]))
-        
+    herb_summ = (len([entity for entity in entity_object_array if not entity.dead]))
+    carn_summ = (len([entity for entity in hunter_object_array if not entity.dead]))
     try:
         
         #try calculate simulation balance metric based off herbivores and eggs as a proportion of carnivores
-        balance = (len(hunter_object_array) / ((summ) * 2) + 1)
+        balance = (carn_summ * 1.5 / ((herb_summ) * 2) + 1)
         
     except:
         
