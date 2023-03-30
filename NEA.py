@@ -1,12 +1,3 @@
-"""
-_|      _|    _|_|    _|_|_|_|_|  _|    _|  _|_|_|      _|_|    _|            _|_|_|  _|_|_|_|  _|        _|_|_|_|    _|_|_|  _|_|_|_|_|  _|_|_|    _|_|    _|      _|      _|_|_|  _|_|_|  _|      _|  
-_|_|    _|  _|    _|      _|      _|    _|  _|    _|  _|    _|  _|          _|        _|        _|        _|        _|            _|        _|    _|    _|  _|_|    _|    _|          _|    _|_|  _|_|  
-_|  _|  _|  _|_|_|_|      _|      _|    _|  _|_|_|    _|_|_|_|  _|            _|_|    _|_|_|    _|        _|_|_|    _|            _|        _|    _|    _|  _|  _|  _|      _|_|      _|    _|  _|  _|  
-_|    _|_|  _|    _|      _|      _|    _|  _|    _|  _|    _|  _|                _|  _|        _|        _|        _|            _|        _|    _|    _|  _|    _|_|          _|    _|    _|      _|  
-_|      _|  _|    _|      _|        _|_|    _|    _|  _|    _|  _|_|_|_|    _|_|_|    _|_|_|_|  _|_|_|_|  _|_|_|_|    _|_|_|      _|      _|_|_|    _|_|    _|      _|    _|_|_|    _|_|_|  _|      _|  
-                                                                                                                                                                                                        
-                                                                      _|_|_|_|_|                                                                                    _|_|_|_|_|       
-"""
 #pygame.draw.polygon(screen, RED, [(200, 100), (300, 200), (100, 200)])
 try:
     import pygame
@@ -2087,6 +2078,10 @@ vgui_checkbox_sim_slow_bool = check_box(
     "slow",
     False)
 
+vgui_checkbox_sim_auto_bool = check_box(
+    (1,80),
+    "auto GPP",
+    True)
 vgui_checkbox_sim_lag_comp = check_box(
     (1,150),
     "lag comp",
@@ -2677,6 +2672,8 @@ def vgui_thread():
     #slow down program if slow button selected
     if (vgui_checkbox_sim_slow_bool.draw()):
         time.sleep(0.1 * (vgui_slider_sim_slow_val.draw() / 100))
+    vgui_checkbox_sim_auto_bool.draw()
+        
         
     #draw selection pressure sliders
     vgui_checkbox_sim_lag_comp.draw()
