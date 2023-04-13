@@ -16,7 +16,7 @@ except:
     sys.exit()
 
 #define default json values to load
-default = {'layer-1': {'food': 5000, 'herbivores': 40, 'carnivores': 15}}
+default = {'layer-1': {'food': 5000, 'herbivores': 40, 'carnivores': 10}}
 
 if os.path.exists(os.getcwd() + "/config.json"):
     #if config file exists
@@ -138,17 +138,27 @@ log_var = 0
 
 def biodiversity_index():
     """calculate the biodiversity index"""
-    num_organisms = len(entity_object_array)
-    register = []
-    for e in entity_object_array:
-        if e.introgenic_dna not in register:
-            register.append(e.introgenic_dna)
-    num_species = len(register)
-    N = num_organisms * (num_organisms - 1)
-    n = 0
+    register = [org.introgenic_dna for org in entity_object_array]
+    N = num_organisms()
+    top = N * (N - 1)
+    bottom = 0
     for r in register:
-        n+=entity_object_array.count(r) * (entity_object_array.count(r)  - 1)
-    return N / n
+        bottom+=register.count(r) * (register.count(r)  - 1)
+    try:
+        return round(top / bottom,3)
+    except:
+        return 1
+
+def num_species():
+    register = [org.introgenic_dna for org in entity_object_array if not org.dead]
+    unique = []
+    for element in register:
+        if element not in unique:
+            unique.append(element)
+    return len(unique)
+
+def num_organisms():
+    return len([org for org in entity_object_array if not org.dead])
 
 class log_entry:
     def __init__(this,text = "",label = "",label_text = ""):
@@ -2718,6 +2728,17 @@ def vgui_thread():
     txt = ui_font_scale_3.render("-FOOD", True, vgui_aux_text_internal)
     panel.blit(txt,(120,724))
 
+    #other metrics e.g bd calculations
+
+    txt = ui_font_scale_3.render(f"biodiversity index: {biodiversity_index()} ", True, vgui_aux_text_internal)
+    panel.blit(txt,(130 - ((txt.get_width() + txt.get_width()) / 2),400))
+    
+    txt = ui_font_scale_3.render(f"num species: {num_species()} ", True, vgui_aux_text_internal)
+    panel.blit(txt,(130 - ((txt.get_width() + txt.get_width()) / 2),420))
+
+    txt = ui_font_scale_3.render(f"num organisms: {num_organisms()} ", True, vgui_aux_text_internal)
+    panel.blit(txt,(130 - ((txt.get_width() + txt.get_width()) / 2),440))
+    
     key_bounds.draw()
 def simulation():
     """links computation of simulation and ui elements"""
